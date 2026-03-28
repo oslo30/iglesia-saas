@@ -14,7 +14,7 @@ import './App.css'
 const SCREEN_TITLES = {
   dashboard: { title: 'Panel Principal', subtitle: 'Resumen de la iglesia' },
   members: { title: 'Miembros', subtitle: 'Gestionar miembros de la iglesia' },
-  donations: { title: 'Donaciones y Diezmos', subtitle: 'Control financiero' },
+  donations: { title: 'Finanzas', subtitle: 'Control financiero' },
   events: { title: 'Eventos y Servicios', subtitle: 'Calendario de servicios' },
   attendance: { title: 'Registro de Asistencia', subtitle: 'Control de asistencia' },
   reports: { title: 'Reportes y Análisis', subtitle: 'Estadísticas de la iglesia' },

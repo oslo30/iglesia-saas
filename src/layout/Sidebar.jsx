@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Home, Users, Heart, Calendar, BarChart3, BarChart, Settings, LogOut, ChevronRight } from 'lucide-react';
+import { Home, Users, Wallet, Calendar, BarChart3, BarChart, Settings, LogOut, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './Sidebar.css';
 
 const navItems = [
   { icon: Home, label: 'Panel', id: 'dashboard' },
   { icon: Users, label: 'Miembros', id: 'members' },
-  { icon: Heart, label: 'Donaciones', id: 'donations' },
+  { icon: Wallet, label: 'Finanzas', id: 'donations' },
   { icon: Calendar, label: 'Eventos', id: 'events' },
   { icon: BarChart3, label: 'Asistencia', id: 'attendance' },
   { icon: BarChart, label: 'Reportes', id: 'reports' },

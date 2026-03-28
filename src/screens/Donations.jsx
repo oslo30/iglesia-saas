@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DollarSign, TrendingUp, CreditCard, Banknote, Smartphone, Download, Plus, Search, Filter, Check, X, Clock, ArrowUpRight, RefreshCw } from 'lucide-react';
+import { DollarSign, TrendingUp, CreditCard, Banknote, Smartphone, Download, Plus, Search, Filter, Check, X, Clock, ArrowUpRight, RefreshCw, Wallet, FileText, FileSpreadsheet, File } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,12 +16,65 @@ const METODO_ICON = {
 function fmt(v) { return '$' + Number(v || 0).toLocaleString('es-CO'); }
 function fmtM(v) { return '$' + (Number(v || 0) / 1000000).toFixed(1) + 'M'; }
 
+function Toast({ message, onClose, type = 'success' }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className="toast" style={{ background: type === 'success' ? '#10B981' : '#EF4444' }}>
+      {type === 'success' ? <Check size={18} /> : <X size={18} />}
+      <span>{message}</span>
+    </div>
+  );
+}
+
+function ExportModal({ onClose, data, onExport }) {
+  const formats = [
+    { id: 'csv', name: 'CSV', desc: 'Para hojas de cálculo', icon: FileSpreadsheet },
+    { id: 'pdf', name: 'PDF', desc: 'Documento para imprimir', icon: FileText },
+    { id: 'excel', name: 'Excel', desc: 'Libro de Excel', icon: FileSpreadsheet },
+    { id: 'word', name: 'Word', desc: 'Documento de Word', icon: File },
+  ];
+
+  function handleExport(format) {
+    onExport(format);
+    onClose();
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="event-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+        <div className="modal-header" style={{ borderTopColor: '#1E3A5F' }}>
+          <h2>Exportar Datos</h2>
+          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        </div>
+        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {formats.map(fmt => (
+            <button key={fmt.id} className="export-option" onClick={() => handleExport(fmt.id)}>
+              <div className="export-icon"><fmt.icon size={24} /></div>
+              <div className="export-info">
+                <span className="export-name">{fmt.name}</span>
+                <span className="export-desc">{fmt.desc}</span>
+              </div>
+              <Download size={18} />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Donations() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [showForm, setShowForm] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [toast, setToast] = useState(null);
 
   // Data states
   const [diezmos, setDiezmos] = useState([]);
@@ -128,17 +181,59 @@ export default function Donations() {
 
   async function handleSaveDonation(formData) {
     const { type, monto, metodo, nombre, telefono, email, estado } = formData;
+    let error = null;
     if (type === 'Diezmo') {
       const mes = new Date().toLocaleDateString('es-ES', { month: 'long' });
       const ano = new Date().getFullYear();
-      await supabase.from('diezmos').insert([{ miembro_id: formData.miembro_id || null, monto: Number(monto), mes, ano, metodo }]);
+      const { error: err } = await supabase.from('diezmos').insert([{ miembro_id: formData.miembro_id || null, monto: Number(monto), mes, ano, metodo }]);
+      error = err;
     } else if (type === 'Ofrenda') {
-      await supabase.from('ofrendas').insert([{ monto: Number(monto), metodo, descripcion: nombre || null }]);
+      const { error: err } = await supabase.from('ofrendas').insert([{ monto: Number(monto), metodo, descripcion: nombre || null }]);
+      error = err;
     } else {
-      await supabase.from('donaciones_especiales').insert([{ nombre: nombre || 'Donación especial', tipo: 'especial', monto: Number(monto), metodo, estado: estado || 'completado', telefono, email }]);
+      const { error: err } = await supabase.from('donaciones_especiales').insert([{ nombre: nombre || 'Donación especial', tipo: 'especial', monto: Number(monto), metodo, estado: estado || 'completado', telefono, email }]);
+      error = err;
     }
-    setShowForm(false);
-    setRefreshKey(k => k + 1);
+    if (error) {
+      setToast({ message: 'Error al guardar: ' + error.message, type: 'error' });
+    } else {
+      setToast({ message: 'Donación registrada con éxito', type: 'success' });
+      setShowForm(false);
+      setRefreshKey(k => k + 1);
+    }
+  }
+
+  function handleExport(format) {
+    const headers = ['Tipo', 'Nombre', 'Método', 'Monto', 'Estado', 'Fecha'];
+    const rows = filteredTx.map(t => [t.type, t.name, t.method, t.amount, t.status, t.date]);
+    let content, filename, mimeType;
+
+    if (format === 'csv') {
+      content = [headers, ...rows].map(r => r.join(',')).join('\n');
+      filename = 'finanzas.csv';
+      mimeType = 'text/csv';
+    } else if (format === 'excel') {
+      content = [headers, ...rows].map(r => r.join('\t')).join('\n');
+      filename = 'finanzas.xls';
+      mimeType = 'application/vnd.ms-excel';
+    } else if (format === 'pdf') {
+      content = 'Reporte de Finanzas\n' + new Date().toLocaleDateString() + '\n\n' + [headers, ...rows].map(r => r.join(' | ')).join('\n');
+      filename = 'finanzas.pdf';
+      mimeType = 'application/pdf';
+    } else {
+      content = 'Reporte de Finanzas\n' + new Date().toLocaleDateString() + '\n\n' + [headers, ...rows].map(r => r.join('\t')).join('\n');
+      filename = 'finanzas.txt';
+      mimeType = 'text/plain';
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    setToast({ message: 'Archivo descargado con éxito', type: 'success' });
   }
 
   const methOptions = ['Transferencia Bancaria', 'Efectivo', 'Billetera Digital', 'Cheque'];
@@ -147,12 +242,12 @@ export default function Donations() {
     <div className="donations-screen">
       <div className="donations-header">
         <div>
-          <h2>Donaciones y Diezmos</h2>
+          <h2>Finanzas</h2>
           <p className="text-muted">Controla las contribuciones y genera reportes financieros</p>
         </div>
         <div className="header-actions">
           <button className="btn-export" onClick={() => setRefreshKey(k => k + 1)}><RefreshCw size={16} /> Actualizar</button>
-          <button className="btn-export"><Download size={16} /> Exportar</button>
+          <button className="btn-export" onClick={() => setShowExport(true)}><Download size={16} /> Exportar</button>
           <button className="btn-primary" onClick={() => setShowForm(true)}><Plus size={16} /> Registrar Donación</button>
         </div>
       </div>
@@ -321,6 +416,12 @@ export default function Donations() {
       {showForm && (
         <DonationFormModal onClose={() => setShowForm(false)} onSubmit={handleSaveDonation} miembros={miembros} />
       )}
+
+      {showExport && (
+        <ExportModal onClose={() => setShowExport(false)} data={filteredTx} onExport={handleExport} />
+      )}
+
+      {toast && <Toast message={toast.message} onClose={() => setToast(null)} type={toast.type} />}
     </div>
   );
 }
