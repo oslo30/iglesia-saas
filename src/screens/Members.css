@@ -297,12 +297,12 @@
   justify-content: center;
   color: var(--color-text-muted);
   transition: all var(--transition-fast);
-  z-index: 1;
+  z-index: 10;
 }
 
 .modal-close:hover {
-  background: var(--color-bg);
-  color: var(--color-text-primary);
+  background: rgba(255,255,255,0.2);
+  color: white;
 }
 
 .modal-header {
@@ -310,6 +310,7 @@
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-6);
+  padding-right: 60px;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
   color: white;
 }
@@ -329,13 +330,17 @@
 }
 
 .modal-header-info {
-  margin-left: var(--space-2);
+  flex: 1;
+  min-width: 0;
 }
 
 .modal-header h2 {
   color: white;
   font-size: 1.125rem;
   margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .modal-header .role-badge {
