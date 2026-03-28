@@ -5,6 +5,11 @@ import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import './Donations.css';
 
+// Cache global para datos de finanzas
+let cachedData = null;
+let lastFetch = 0;
+const CACHE_DURATION = 30000; // 30 segundos
+
 const COLORS = ['#1E3A5F', '#10B981', '#C9A84C', '#8B5CF6'];
 const METODO_ICON = {
   'Transferencia Bancaria': Banknote,
@@ -83,42 +88,51 @@ export default function Donations() {
   const [miembros, setMiembros] = useState([]);
 
   useEffect(() => {
-    loadData();
-  }, [refreshKey]);
+    const now = Date.now()
+    if (cachedData && (now - lastFetch) < CACHE_DURATION) {
+      // Usar cache
+      setDiezmos(cachedData.diezmos)
+      setOfrendas(cachedData.ofrendas)
+      setEspeciales(cachedData.especiales)
+      setMiembros(cachedData.miembros)
+      setLoading(false)
+      return
+    }
+    loadData()
+  }, []);
 
   async function loadData() {
-    setLoading(true);
-    console.log('Cargando datos de finanzas...');
-    const now = new Date();
-    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString();
-    console.log('Fecha sixMonthsAgo:', sixMonthsAgo);
+    setLoading(true)
+
+    const now = new Date()
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+    sixMonthsAgo.setHours(0, 0, 0, 0)
 
     try {
-      console.log('Consultando diezmos...');
-      const { data: dz, error: errDz } = await supabase.from('diezmos').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false });
-      console.log('Diezmos resultado:', dz?.length || 0, errDz ? 'ERROR: ' + errDz.message : 'OK');
+      const [dzRes, ofRes, espRes, mbsRes] = await Promise.all([
+        supabase.from('diezmos').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
+        supabase.from('ofrendas').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
+        supabase.from('donaciones_especiales').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
+        supabase.from('miembros').select('id, nombre, apellido').eq('estado', 'activo').order('apellido'),
+      ])
 
-      console.log('Consultando ofrendas...');
-      const { data: of, error: errOf } = await supabase.from('ofrendas').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false });
-      console.log('Ofrendas resultado:', of?.length || 0, errOf ? 'ERROR: ' + errOf.message : 'OK');
+      const dz = dzRes.data || []
+      const of = ofRes.data || []
+      const esp = espRes.data || []
+      const mbs = mbsRes.data || []
 
-      console.log('Consultando donaciones_especiales...');
-      const { data: esp, error: errEsp } = await supabase.from('donaciones_especiales').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false });
-      console.log('Especiales resultado:', esp?.length || 0, errEsp ? 'ERROR: ' + errEsp.message : 'OK');
+      // Guardar en cache
+      cachedData = { diezmos: dz, ofrendas: of, especiales: esp, miembros: mbs }
+      lastFetch = Date.now()
 
-      console.log('Consultando miembros...');
-      const { data: mbs, error: errMbs } = await supabase.from('miembros').select('id, nombre, apellido').eq('estado', 'activo').order('apellido');
-      console.log('Miembros resultado:', mbs?.length || 0, errMbs ? 'ERROR: ' + errMbs.message : 'OK');
-
-      setDiezmos(dz || []);
-      setOfrendas(of || []);
-      setEspeciales(esp || []);
-      setMiembros(mbs || []);
+      setDiezmos(dz)
+      setOfrendas(of)
+      setEspeciales(esp)
+      setMiembros(mbs)
     } catch (err) {
-      console.error('Error capturando:', err);
+      console.error('Error cargando finanzas:', err)
     }
-    setLoading(false);
-    console.log('Fin carga');
+    setLoading(false)
   }
 
   // Aggregate monthly data for bar chart
@@ -225,7 +239,9 @@ export default function Donations() {
     } else {
       setToast({ message: successMsg, type: 'success' });
       setShowForm(false);
-      setRefreshKey(k => k + 1);
+      // Limpiar cache y recargar
+      cachedData = null;
+      loadData();
     }
   }
 
