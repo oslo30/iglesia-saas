@@ -1,3 +1,4 @@
+import React from 'react';
 import Sidebar from './Sidebar';
 import TopNav from '../components/TopNav';
 import './Layout.css';
@@ -9,7 +10,7 @@ export default function Layout({ children, activeScreen, setActiveScreen, title,
       <div className="main-area">
         <TopNav title={title} subtitle={subtitle} />
         <main className="content-area">
-          {children}
+          {React.cloneElement(children, { setActiveScreen })}
         </main>
       </div>
     </div>

@@ -11,7 +11,8 @@ function formatNum(n) {
 function fmt(v) { return '$' + Number(v || 0).toLocaleString('es-CO') }
 function fmtM(v) { return '$' + (Number(v || 0) / 1000000).toFixed(1) + 'M' }
 
-export default function Dashboard() {
+export default function Dashboard(props) {
+  const { setActiveScreen } = props
   const [kpis, setKpis] = useState({ miembros: 0, asistencia: 0, diezmos: 0, grupos: 0 })
   const [attendanceData, setAttendanceData] = useState([])
   const [revenueData, setRevenueData] = useState([])
@@ -127,11 +128,17 @@ export default function Dashboard() {
   ]
 
   const quickActions = [
-    { label: 'Registrar Asistencia', icon: '01', color: '#1E3A5F' },
-    { label: 'Agregar Miembro', icon: '02', color: '#10B981' },
-    { label: 'Registrar Donación', icon: '03', color: '#C9A84C' },
-    { label: 'Programar Evento', icon: '04', color: '#3B82F6' },
+    { label: 'Registrar Asistencia', icon: '01', color: '#1E3A5F', screen: 'attendance' },
+    { label: 'Agregar Miembro', icon: '02', color: '#10B981', screen: 'members' },
+    { label: 'Registrar Donación', icon: '03', color: '#C9A84C', screen: 'donations' },
+    { label: 'Programar Evento', icon: '04', color: '#3B82F6', screen: 'events' },
   ]
+
+  function handleQuickAction(screen) {
+    if (setActiveScreen) {
+      setActiveScreen(screen)
+    }
+  }
 
   const formatActivityTime = (dateStr) => {
     const diff = Date.now() - new Date(dateStr).getTime()
@@ -261,7 +268,7 @@ export default function Dashboard() {
             </div>
             <div className="quick-actions">
               {quickActions.map((action, i) => (
-                <button key={i} className="quick-action-btn">
+                <button key={i} className="quick-action-btn" onClick={() => handleQuickAction(action.screen)}>
                   <div className="qa-icon" style={{ background: action.color }}>
                     <span>{action.icon}</span>
                   </div>
