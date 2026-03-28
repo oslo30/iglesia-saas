@@ -111,13 +111,12 @@ export default function Donations() {
     sixMonthsAgo.setHours(0, 0, 0, 0)
 
     try {
-      const [dzRes, ofRes, espRes, egRes, mbsRes] = await Promise.all([
-        supabase.from('diezmos').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
-        supabase.from('ofrendas').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
-        supabase.from('donaciones_especiales').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
-        supabase.from('gastos').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
-        supabase.from('miembros').select('id, nombre, apellido').eq('estado', 'activo').order('apellido'),
-      ])
+      // Ejecutar cada consulta INDEPENDIENTEMENTE para que una falla no rompa las otras
+      const dzRes = await supabase.from('diezmos').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false })
+      const ofRes = await supabase.from('ofrendas').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false })
+      const espRes = await supabase.from('donaciones_especiales').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false })
+      const egRes = await supabase.from('gastos').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false })
+      const mbsRes = await supabase.from('miembros').select('id, nombre, apellido').eq('estado', 'activo').order('apellido')
 
       const dz = dzRes.data || []
       const of = ofRes.data || []
@@ -136,6 +135,14 @@ export default function Donations() {
       setMiembros(mbs)
     } catch (err) {
       console.error('Error cargando finanzas:', err)
+      // Even if there's an error, try to use cache
+      if (cachedData) {
+        setDiezmos(cachedData.diezmos)
+        setOfrendas(cachedData.ofrendas)
+        setEspeciales(cachedData.especiales)
+        setEgresos(cachedData.egresos)
+        setMiembros(cachedData.miembros)
+      }
     }
     setLoading(false)
   }
