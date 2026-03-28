@@ -88,21 +88,31 @@ export default function Donations() {
 
   async function loadData() {
     setLoading(true);
+    console.log('Cargando datos de finanzas...');
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString();
 
-    const [dz, of, esp, mbs] = await Promise.all([
-      supabase.from('diezmos').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false }),
-      supabase.from('ofrendas').select('*, servicios(nombre)').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false }),
-      supabase.from('donaciones_especiales').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false }),
-      supabase.from('miembros').select('id, nombre, apellido').eq('estado', 'activo').order('apellido'),
-    ]);
+    try {
+      const [dz, of, esp, mbs] = await Promise.all([
+        supabase.from('diezmos').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false }),
+        supabase.from('ofrendas').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false }),
+        supabase.from('donaciones_especiales').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false }),
+        supabase.from('miembros').select('id, nombre, apellido').eq('estado', 'activo').order('apellido'),
+      ]);
 
-    setDiezmos(dz.data || []);
-    setOfrendas(of.data || []);
-    setEspeciales(esp.data || []);
-    setMiembros(mbs.data || []);
+      console.log('Diezmos:', dz.data?.length || 0, dz.error ? dz.error.message : '');
+      console.log('Ofrendas:', of.data?.length || 0, of.error ? of.error.message : '');
+      console.log('Especiales:', esp.data?.length || 0, esp.error ? esp.error.message : '');
+      console.log('Miembros:', mbs.data?.length || 0, mbs.error ? mbs.error.message : '');
+
+      setDiezmos(dz.data || []);
+      setOfrendas(of.data || []);
+      setEspeciales(esp.data || []);
+      setMiembros(mbs.data || []);
+    } catch (err) {
+      console.error('Error cargando datos:', err);
+    }
     setLoading(false);
   }
 
@@ -264,7 +274,10 @@ export default function Donations() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>Cargando datos financieros...</div>
+        <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>
+          <div style={{ marginBottom: '12px' }}>Cargando datos financieros...</div>
+          <div style={{ fontSize: '0.875rem' }}>Esto puede tardar unos segundos</div>
+        </div>
       ) : (
         <>
           {/* Summary Cards */}
