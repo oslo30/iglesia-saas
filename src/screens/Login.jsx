@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Church } from 'lucide-react'
+import { Church, Mail, Lock } from 'lucide-react'
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -14,7 +14,7 @@ export default function Login({ onLogin }) {
     try {
       await onLogin(email, password)
     } catch (err) {
-      setError(err.message || 'Error al iniciar sesión')
+      setError(err.message || 'Credenciales incorrectas. Verifica tu correo y contraseña.')
     } finally {
       setLoading(false)
     }
@@ -23,45 +23,59 @@ export default function Login({ onLogin }) {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <Church size={48} color="#1E3A5F" />
+        <div className="login-header">
+          <div className="login-logo">
+            <Church size={32} />
+          </div>
+          <h1>Iglesia</h1>
+          <p>Sistema de Gestión Pastoral</p>
         </div>
-        <h1 style={{ textAlign: 'center' }}>Iglesia</h1>
-        <p style={{ textAlign: 'center', marginBottom: 24 }}>Sistema de Gestión Pastoral</p>
 
         {error && (
-          <div style={{ background: '#FEE2E2', color: '#DC2626', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+          <div className="login-error">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="login-field">
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="form-field">
             <label>Correo electrónico</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="tu@correo.com"
-              required
-            />
+            <div style={{ position: 'relative' }}>
+              <Mail size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="tu@correo.com"
+                required
+                style={{ paddingLeft: 40 }}
+              />
+            </div>
           </div>
 
-          <div className="login-field">
+          <div className="form-field">
             <label>Contraseña</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-            />
+            <div style={{ position: 'relative' }}>
+              <Lock size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                style={{ paddingLeft: 40 }}
+              />
+            </div>
           </div>
 
-          <button type="submit" className="login-btn" disabled={loading}>
+          <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
         </form>
+
+        <div className="login-footer">
+          ¿No tienes cuenta? Contacta al administrador del sistema.
+        </div>
       </div>
     </div>
   )
