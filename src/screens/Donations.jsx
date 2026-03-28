@@ -90,30 +90,35 @@ export default function Donations() {
     setLoading(true);
     console.log('Cargando datos de finanzas...');
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString();
+    console.log('Fecha sixMonthsAgo:', sixMonthsAgo);
 
     try {
-      const [dz, of, esp, mbs] = await Promise.all([
-        supabase.from('diezmos').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false }),
-        supabase.from('ofrendas').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false }),
-        supabase.from('donaciones_especiales').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false }),
-        supabase.from('miembros').select('id, nombre, apellido').eq('estado', 'activo').order('apellido'),
-      ]);
+      console.log('Consultando diezmos...');
+      const { data: dz, error: errDz } = await supabase.from('diezmos').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false });
+      console.log('Diezmos resultado:', dz?.length || 0, errDz ? 'ERROR: ' + errDz.message : 'OK');
 
-      console.log('Diezmos:', dz.data?.length || 0, dz.error ? dz.error.message : '');
-      console.log('Ofrendas:', of.data?.length || 0, of.error ? of.error.message : '');
-      console.log('Especiales:', esp.data?.length || 0, esp.error ? esp.error.message : '');
-      console.log('Miembros:', mbs.data?.length || 0, mbs.error ? mbs.error.message : '');
+      console.log('Consultando ofrendas...');
+      const { data: of, error: errOf } = await supabase.from('ofrendas').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false });
+      console.log('Ofrendas resultado:', of?.length || 0, errOf ? 'ERROR: ' + errOf.message : 'OK');
 
-      setDiezmos(dz.data || []);
-      setOfrendas(of.data || []);
-      setEspeciales(esp.data || []);
-      setMiembros(mbs.data || []);
+      console.log('Consultando donaciones_especiales...');
+      const { data: esp, error: errEsp } = await supabase.from('donaciones_especiales').select('*').gte('created_at', sixMonthsAgo).order('created_at', { ascending: false });
+      console.log('Especiales resultado:', esp?.length || 0, errEsp ? 'ERROR: ' + errEsp.message : 'OK');
+
+      console.log('Consultando miembros...');
+      const { data: mbs, error: errMbs } = await supabase.from('miembros').select('id, nombre, apellido').eq('estado', 'activo').order('apellido');
+      console.log('Miembros resultado:', mbs?.length || 0, errMbs ? 'ERROR: ' + errMbs.message : 'OK');
+
+      setDiezmos(dz || []);
+      setOfrendas(of || []);
+      setEspeciales(esp || []);
+      setMiembros(mbs || []);
     } catch (err) {
-      console.error('Error cargando datos:', err);
+      console.error('Error capturando:', err);
     }
     setLoading(false);
+    console.log('Fin carga');
   }
 
   // Aggregate monthly data for bar chart
