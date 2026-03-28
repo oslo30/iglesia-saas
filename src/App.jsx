@@ -5,7 +5,6 @@ import Dashboard from './screens/Dashboard'
 import Members from './screens/Members'
 import Donations from './screens/Donations'
 import Sidebar from './components/Sidebar'
-import './App.css'
 
 const AuthContext = createContext(null)
 
