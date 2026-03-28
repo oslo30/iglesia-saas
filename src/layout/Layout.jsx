@@ -10,7 +10,7 @@ export default function Layout({ children, activeScreen, setActiveScreen, title,
       <div className="main-area">
         <TopNav title={title} subtitle={subtitle} />
         <main className="content-area">
-          {React.cloneElement(children, { setActiveScreen })}
+          {children}
         </main>
       </div>
     </div>

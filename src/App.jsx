@@ -50,14 +50,15 @@ function App() {
   }
 
   const renderScreen = () => {
+    const props = { setActiveScreen }
     switch (activeScreen) {
-      case 'dashboard': return <Dashboard />
-      case 'members': return <Members />
-      case 'donations': return <Donations />
-      case 'events': return <Events />
-      case 'attendance': return <Attendance />
-      case 'reports': return <Reports />
-      default: return <Dashboard />
+      case 'dashboard': return <Dashboard {...props} />
+      case 'members': return <Members {...props} />
+      case 'donations': return <Donations {...props} />
+      case 'events': return <Events {...props} />
+      case 'attendance': return <Attendance {...props} />
+      case 'reports': return <Reports {...props} />
+      default: return <Dashboard {...props} />
     }
   }
 
