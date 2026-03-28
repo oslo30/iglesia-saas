@@ -157,9 +157,15 @@ export default function Donations() {
 
   // Combined transactions
   const allTx = [
-    ...diezmos.map(d => ({ id: d.id, name: d.miembro_id, type: 'Diezmo', method: d.metodo || 'Transferencia Bancaria', amount: d.monto, status: 'completed', date: new Date(d.created_at).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }), created_at: d.created_at })),
-    ...ofrendas.map(o => ({ id: o.id, name: o.servicios?.nombre || 'Ofrenda general', type: 'Ofrenda', method: o.metodo || 'Efectivo', amount: o.monto, status: 'completed', date: new Date(o.created_at).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }), created_at: o.created_at })),
-    ...especiales.map(e => ({ id: e.id, name: e.nombre, type: 'Especial', method: e.metodo || 'Transferencia Bancaria', amount: e.monto, status: e.estado || 'completed', date: new Date(e.created_at).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }), created_at: e.created_at })),
+    ...diezmos.map(d => {
+      const mb = miembros.find(m => m.id === d.miembro_id);
+      return { id: d.id, name: mb ? `${mb.nombre} ${mb.apellido}` : 'Sin nombre', type: 'Diezmo', method: d.metodo || 'Transferencia Bancaria', amount: d.monto, status: 'completed', date: new Date(d.created_at).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }), created_at: d.created_at };
+    }),
+    ...ofrendas.map(o => ({ id: o.id, name: o.descripcion || 'Ofrenda general', type: 'Ofrenda', method: o.metodo || 'Efectivo', amount: o.monto, status: 'completed', date: new Date(o.created_at).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }), created_at: o.created_at })),
+    ...especiales.map(e => {
+      const mb = miembros.find(m => m.id === e.miembro_id);
+      return { id: e.id, name: mb ? `${mb.nombre} ${mb.apellido}` : (e.nombre || 'Denario'), type: 'Denario', method: e.metodo || 'Transferencia Bancaria', amount: e.monto, status: e.estado || 'completed', date: new Date(e.created_at).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }), created_at: e.created_at };
+    }),
   ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   const filteredTx = activeTab === 'all' ? allTx
@@ -180,24 +186,29 @@ export default function Donations() {
   });
 
   async function handleSaveDonation(formData) {
-    const { type, monto, metodo, nombre, telefono, email, estado } = formData;
+    const { type, monto, metodo, nombre, telefono, email, estado, miembro_id } = formData;
     let error = null;
+    let successMsg = '';
+
     if (type === 'Diezmo') {
       const mes = new Date().toLocaleDateString('es-ES', { month: 'long' });
       const ano = new Date().getFullYear();
-      const { error: err } = await supabase.from('diezmos').insert([{ miembro_id: formData.miembro_id || null, monto: Number(monto), mes, ano, metodo }]);
+      const { error: err } = await supabase.from('diezmos').insert([{ miembro_id: miembro_id || null, monto: Number(monto), mes, ano, metodo }]);
       error = err;
+      successMsg = 'Diezmo registrado con éxito';
     } else if (type === 'Ofrenda') {
       const { error: err } = await supabase.from('ofrendas').insert([{ monto: Number(monto), metodo, descripcion: nombre || null }]);
       error = err;
+      successMsg = 'Ofrenda registrada con éxito';
     } else {
-      const { error: err } = await supabase.from('donaciones_especiales').insert([{ nombre: nombre || 'Donación especial', tipo: 'especial', monto: Number(monto), metodo, estado: estado || 'completado', telefono, email }]);
+      const { error: err } = await supabase.from('donaciones_especiales').insert([{ nombre: nombre, tipo: 'denario', monto: Number(monto), metodo, estado: estado || 'completado', telefono, email, miembro_id: miembro_id || null }]);
       error = err;
+      successMsg = 'Denario registrado con éxito';
     }
     if (error) {
       setToast({ message: 'Error al guardar: ' + error.message, type: 'error' });
     } else {
-      setToast({ message: 'Donación registrada con éxito', type: 'success' });
+      setToast({ message: successMsg, type: 'success' });
       setShowForm(false);
       setRefreshKey(k => k + 1);
     }
@@ -248,7 +259,7 @@ export default function Donations() {
         <div className="header-actions">
           <button className="btn-export" onClick={() => setRefreshKey(k => k + 1)}><RefreshCw size={16} /> Actualizar</button>
           <button className="btn-export" onClick={() => setShowExport(true)}><Download size={16} /> Exportar</button>
-          <button className="btn-primary" onClick={() => setShowForm(true)}><Plus size={16} /> Registrar Donación</button>
+          <button className="btn-primary" onClick={() => setShowForm(true)}><Plus size={16} /> Registrar Ingreso</button>
         </div>
       </div>
 
@@ -366,7 +377,7 @@ export default function Donations() {
               <button className={`tab-mini ${activeTab === 'all' ? 'active' : ''}`} onClick={() => setActiveTab('all')}>Todas</button>
               <button className={`tab-mini ${activeTab === 'diezmo' ? 'active' : ''}`} onClick={() => setActiveTab('diezmo')}>Diezmos</button>
               <button className={`tab-mini ${activeTab === 'ofrenda' ? 'active' : ''}`} onClick={() => setActiveTab('ofrenda')}>Ofrendas</button>
-              <button className={`tab-mini ${activeTab === 'especial' ? 'active' : ''}`} onClick={() => setActiveTab('especial')}>Especiales</button>
+              <button className={`tab-mini ${activeTab === 'denario' ? 'active' : ''}`} onClick={() => setActiveTab('denario')}>Denario</button>
               <button className={`tab-mini ${activeTab === 'pending' ? 'active' : ''}`} onClick={() => setActiveTab('pending')}>Pendientes</button>
             </div>
 
@@ -438,16 +449,16 @@ function DonationFormModal({ onClose, onSubmit, miembros }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="event-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
         <div className="modal-header" style={{ borderTopColor: '#C9A84C' }}>
-          <h2>Registrar Donación</h2>
+          <h2>Registrar Ingreso</h2>
           <button className="modal-close" onClick={onClose}><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div className="login-field">
-            <label>Tipo de Donación</label>
+            <label>Tipo de Ingreso</label>
             <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
               <option value="Diezmo">Diezmo</option>
               <option value="Ofrenda">Ofrenda</option>
-              <option value="Especial">Donación Especial</option>
+              <option value="Especial">Denario</option>
             </select>
           </div>
 
@@ -463,7 +474,25 @@ function DonationFormModal({ onClose, onSubmit, miembros }) {
             </div>
           )}
 
-          {(form.type === 'Ofrenda' || form.type === 'Especial') && (
+          {form.type === 'Especial' && (
+            <>
+              <div className="login-field">
+                <label>Miembro</label>
+                <select value={form.miembro_id} onChange={e => setForm({ ...form, miembro_id: e.target.value })}>
+                  <option value="">— Seleccionar miembro —</option>
+                  {miembros.map(m => (
+                    <option key={m.id} value={m.id}>{m.nombre} {m.apellido}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="login-field">
+                <label>Descripción</label>
+                <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="Ej: Ofrenda especial, Construcción..." />
+              </div>
+            </>
+          )}
+
+          {form.type === 'Ofrenda' && (
             <div className="login-field">
               <label>Descripción</label>
               <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="Ej: Ofrenda domingo, Fondo de construcción..." />

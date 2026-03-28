@@ -420,7 +420,8 @@
   color: var(--color-accent-dark);
 }
 
-.type-badge.type-especial {
+.type-badge.type-especial,
+.type-badge.type-denario {
   background: var(--color-success-light);
   color: var(--color-success);
 }
