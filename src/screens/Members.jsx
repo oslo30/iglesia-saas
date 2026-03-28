@@ -14,6 +14,8 @@ export default function Members() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingMember, setEditingMember] = useState(null)
   const perPage = 5
 
   useEffect(() => {
@@ -54,9 +56,45 @@ export default function Members() {
 
   async function handleDeleteMember(id) {
     if (!confirm('¿Eliminar este miembro?')) return
-    await supabase.from('miembros').delete().eq('id', id)
-    loadMembers()
-    setSelected(null)
+    const { error } = await supabase.from('miembros').delete().eq('id', id)
+    if (error) {
+      alert('Error al eliminar: ' + error.message)
+    } else {
+      loadMembers()
+      setSelected(null)
+    }
+  }
+
+  function openEditModal(member) {
+    setEditingMember(member)
+    setShowEditModal(true)
+  }
+
+  async function handleUpdateMember(formData) {
+    console.log('Actualizando miembro:', formData)
+    const { data, error } = await supabase
+      .from('miembros')
+      .update({
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        tipo: formData.tipo,
+        estado: formData.estado,
+        telefono: formData.telefono || null,
+        email: formData.email || null,
+      })
+      .eq('id', editingMember.id)
+      .select()
+
+    if (error) {
+      console.error('Error al actualizar:', error)
+      alert('Error al actualizar: ' + error.message)
+    } else {
+      console.log('Actualizado exitoso:', data)
+      loadMembers()
+      setShowEditModal(false)
+      setEditingMember(null)
+      setSelected(null)
+    }
   }
 
   const filtered = members.filter(m => {
@@ -210,6 +248,9 @@ export default function Members() {
                 </div>
               </div>
               <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
+                <button className="btn-secondary" onClick={() => openEditModal(selected)}>
+                  Editar
+                </button>
                 <button className="btn-danger" onClick={() => handleDeleteMember(selected.id)}>
                   <Trash2 size={16} /> Eliminar
                 </button>
@@ -221,6 +262,10 @@ export default function Members() {
 
       {showAddModal && (
         <AddMemberModal onClose={() => setShowAddModal(false)} onSubmit={handleAddMember} />
+      )}
+
+      {showEditModal && editingMember && (
+        <EditMemberModal member={editingMember} onClose={() => { setShowEditModal(false); setEditingMember(null) }} onSubmit={handleUpdateMember} />
       )}
     </div>
   )
@@ -283,6 +328,77 @@ function AddMemberModal({ onClose, onSubmit }) {
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
             <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function EditMemberModal({ member, onClose, onSubmit }) {
+  const [form, setForm] = useState({
+    nombre: member.nombre || '',
+    apellido: member.apellido || '',
+    tipo: member.tipo || 'miembro',
+    estado: member.estado || 'activo',
+    telefono: member.telefono || '',
+    email: member.email || ''
+  })
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    onSubmit(form)
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="member-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <div className="modal-header" style={{ borderTopColor: '#3B82F6' }}>
+          <h2>Editar Miembro</h2>
+        </div>
+        <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="login-field">
+              <label>Nombre</label>
+              <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required />
+            </div>
+            <div className="login-field">
+              <label>Apellido</label>
+              <input value={form.apellido} onChange={e => setForm({ ...form, apellido: e.target.value })} required />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="login-field">
+              <label>Tipo</label>
+              <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value, estado: e.target.value === 'visitante' ? 'activo' : form.estado })}>
+                <option value="miembro">Miembro</option>
+                <option value="servidor">Servidor</option>
+                <option value="visitante">Visitante</option>
+              </select>
+            </div>
+            {form.tipo !== 'visitante' && (
+              <div className="login-field">
+                <label>Estado</label>
+                <select value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value })}>
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                  <option value="en disciplina">En Disciplina</option>
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="login-field">
+            <label>Email</label>
+            <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+          </div>
+          <div className="login-field">
+            <label>Teléfono</label>
+            <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} />
+          </div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn-primary">Guardar Cambios</button>
           </div>
         </form>
       </div>
