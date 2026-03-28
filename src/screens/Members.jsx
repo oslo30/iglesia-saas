@@ -1,10 +1,24 @@
 import { useEffect, useState } from 'react'
-import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Mail, Phone, MapPin, X, Plus, Trash2 } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Mail, Phone, MapPin, X, Plus, Trash2, CheckCircle } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Members.css'
 
 const statusColors = { activo: '#10B981', visitante: '#3B82F6', inactivo: '#94A3B8', 'en disciplina': '#EF4444' }
 const tipoColors = { miembro: '#1E3A5F', visitante: '#8B5CF6', servidor: '#C9A84C' }
+
+function Toast({ message, onClose }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000)
+    return () => clearTimeout(timer)
+  }, [onClose])
+
+  return (
+    <div className="toast">
+      <CheckCircle size={18} />
+      <span>{message}</span>
+    </div>
+  )
+}
 
 export default function Members() {
   const [members, setMembers] = useState([])
@@ -16,7 +30,12 @@ export default function Members() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingMember, setEditingMember] = useState(null)
+  const [toast, setToast] = useState(null)
   const perPage = 5
+
+  function showToast(message) {
+    setToast(message)
+  }
 
   useEffect(() => {
     loadMembers()
@@ -51,6 +70,7 @@ export default function Members() {
       console.log('Guardado exitoso:', data)
       loadMembers()
       setShowAddModal(false)
+      showToast('Miembro agregado con éxito')
     }
   }
 
@@ -62,6 +82,7 @@ export default function Members() {
     } else {
       loadMembers()
       setSelected(null)
+      showToast('Miembro eliminado con éxito')
     }
   }
 
@@ -94,6 +115,7 @@ export default function Members() {
       setShowEditModal(false)
       setEditingMember(null)
       setSelected(null)
+      showToast('Cambios guardados con éxito')
     }
   }
 
@@ -267,6 +289,8 @@ export default function Members() {
       {showEditModal && editingMember && (
         <EditMemberModal member={editingMember} onClose={() => { setShowEditModal(false); setEditingMember(null) }} onSubmit={handleUpdateMember} />
       )}
+
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   )
 }
