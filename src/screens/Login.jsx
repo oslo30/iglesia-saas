@@ -1,31 +1,18 @@
 import { useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
 import { Church } from 'lucide-react'
-import './Login.css'
 
-export default function Login() {
-  const { signIn, signUp } = useAuth()
+export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState('login')
-  const [nombre, setNombre] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      if (mode === 'login') {
-        await signIn(email, password)
-      } else {
-        const data = await signUp(email, password, nombre)
-        if (data.user && !data.session) {
-          setError('Revisa tu correo para confirmar el enlace de verificación.')
-          setMode('login')
-        }
-      }
+      await onLogin(email, password)
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión')
     } finally {
@@ -36,85 +23,45 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-logo">
-          <div className="login-logo-icon">
-            <Church />
-          </div>
-          <h1 className="login-title">Iglesia</h1>
-          <p className="login-subtitle">Sistema de Gestión Pastoral</p>
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <Church size={48} color="#1E3A5F" />
         </div>
+        <h1 style={{ textAlign: 'center' }}>Iglesia</h1>
+        <p style={{ textAlign: 'center', marginBottom: 24 }}>Sistema de Gestión Pastoral</p>
 
         {error && (
-          <div className="login-error">
-            <span>{error}</span>
+          <div style={{ background: '#FEE2E2', color: '#DC2626', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+            {error}
           </div>
         )}
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          {mode === 'registro' && (
-            <div className="login-field">
-              <label htmlFor="nombre">Nombre</label>
-              <input
-                id="nombre"
-                type="text"
-                placeholder="Tu nombre"
-                value={nombre}
-                onChange={e => setNombre(e.target.value)}
-                required
-              />
-            </div>
-          )}
-
+        <form onSubmit={handleSubmit}>
           <div className="login-field">
-            <label htmlFor="email">Correo electrónico</label>
+            <label>Correo electrónico</label>
             <input
-              id="email"
               type="email"
-              placeholder="correo@ejemplo.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
+              placeholder="tu@correo.com"
               required
             />
           </div>
 
           <div className="login-field">
-            <label htmlFor="password">Contraseña</label>
+            <label>Contraseña</label>
             <input
-              id="password"
               type="password"
-              placeholder="••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
               required
-              minLength={6}
             />
           </div>
 
           <button type="submit" className="login-btn" disabled={loading}>
-            {loading
-              ? <span className="spinner" />
-              : mode === 'login'
-                ? 'Iniciar Sesión'
-                : 'Crear Cuenta'
-            }
+            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
         </form>
-
-        {mode === 'login' ? (
-          <div className="login-register">
-            ¿No tienes cuenta?{' '}
-            <a href="#" onClick={e => { e.preventDefault(); setMode('registro'); setError('') }}>
-              Regístrate
-            </a>
-          </div>
-        ) : (
-          <div className="login-register">
-            ¿Ya tienes cuenta?{' '}
-            <a href="#" onClick={e => { e.preventDefault(); setMode('login'); setError('') }}>
-              Inicia sesión
-            </a>
-          </div>
-        )}
       </div>
     </div>
   )

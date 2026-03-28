@@ -1,79 +1,69 @@
-import { useState } from 'react'
-import { useAuth } from './contexts/AuthContext'
-import RequireAuth from './components/RequireAuth'
-import Layout from './layout/Layout'
+import { useState, useEffect, createContext, useContext } from 'react'
+import { supabase } from './supabase'
+import Login from './screens/Login'
 import Dashboard from './screens/Dashboard'
 import Members from './screens/Members'
 import Donations from './screens/Donations'
-import Events from './screens/Events'
-import Attendance from './screens/Attendance'
-import Reports from './screens/Reports'
-import Login from './screens/Login'
+import Sidebar from './components/Sidebar'
 import './App.css'
 
-const SCREEN_TITLES = {
-  dashboard: { title: 'Panel Principal', subtitle: 'Resumen de la iglesia' },
-  members: { title: 'Miembros', subtitle: 'Gestionar miembros de la iglesia' },
-  donations: { title: 'Finanzas', subtitle: 'Control financiero' },
-  events: { title: 'Eventos y Servicios', subtitle: 'Calendario de servicios' },
-  attendance: { title: 'Registro de Asistencia', subtitle: 'Control de asistencia' },
-  reports: { title: 'Reportes y Análisis', subtitle: 'Estadísticas de la iglesia' },
+const AuthContext = createContext(null)
+
+export function useAuth() {
+  return useContext(AuthContext)
 }
 
-function App() {
-  const { user, loading } = useAuth()
-  const [activeScreen, setActiveScreen] = useState('dashboard')
+export default function App() {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [currentScreen, setCurrentScreen] = useState('dashboard')
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth:', event)
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  async function signIn(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
+    return data
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut()
+  }
 
   if (loading) {
-    return (
-      <div style={{
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--color-bg)'
-      }}>
-        <div style={{
-          width: 40,
-          height: 40,
-          border: '3px solid rgba(30, 58, 95, 0.2)',
-          borderTopColor: '#1E3A5F',
-          borderRadius: '50%',
-          animation: 'spin 0.7s linear infinite'
-        }} />
-      </div>
-    )
+    return <div className="loading"><div className="spinner" /></div>
   }
 
   if (!user) {
-    return <Login />
+    return <Login onLogin={signIn} />
   }
 
-  const renderScreen = () => {
-    const props = { setActiveScreen }
-    switch (activeScreen) {
-      case 'dashboard': return <Dashboard {...props} />
-      case 'members': return <Members {...props} />
-      case 'donations': return <Donations {...props} />
-      case 'events': return <Events {...props} />
-      case 'attendance': return <Attendance {...props} />
-      case 'reports': return <Reports {...props} />
-      default: return <Dashboard {...props} />
-    }
+  const screens = {
+    dashboard: <Dashboard />,
+    members: <Members />,
+    donations: <Donations />,
   }
 
   return (
-    <RequireAuth>
-      <Layout
-        activeScreen={activeScreen}
-        setActiveScreen={setActiveScreen}
-        title={SCREEN_TITLES[activeScreen]?.title}
-        subtitle={SCREEN_TITLES[activeScreen]?.subtitle}
-      >
-        {renderScreen()}
-      </Layout>
-    </RequireAuth>
+    <AuthContext.Provider value={{ user, signOut }}>
+      <div className="app-layout">
+        <Sidebar currentScreen={currentScreen} onNavigate={setCurrentScreen} onLogout={signOut} user={user} />
+        <main className="main-content">
+          {screens[currentScreen]}
+        </main>
+      </div>
+    </AuthContext.Provider>
   )
 }
-
-export default App
