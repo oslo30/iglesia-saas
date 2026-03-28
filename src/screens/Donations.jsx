@@ -264,8 +264,8 @@ export default function Donations() {
     const { error } = await supabase.from('gastos').insert([{
       concepto: descripcion,
       monto: Number(monto),
-      metodo,
-      categoria
+      categoria,
+      notas: metodo || null
     }]);
 
     if (error) {
