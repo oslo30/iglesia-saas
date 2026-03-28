@@ -86,6 +86,24 @@
   transform: translateY(-1px);
 }
 
+.btn-danger {
+  padding: var(--space-2) var(--space-4);
+  background: #EF4444;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-fast);
+}
+
+.btn-danger:hover {
+  background: #DC2626;
+  transform: translateY(-1px);
+}
+
 /* Table */
 .members-table-card {
   overflow: hidden;
@@ -308,6 +326,10 @@
   color: white;
   border: 3px solid rgba(255,255,255,0.3);
   flex-shrink: 0;
+}
+
+.modal-header-info {
+  margin-left: var(--space-2);
 }
 
 .modal-header h2 {

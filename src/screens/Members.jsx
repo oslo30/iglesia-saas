@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Mail, Phone, MapPin, X, Plus } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Mail, Phone, MapPin, X, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Members.css'
 
-const statusColors = { activo: '#10B981', visitante: '#3B82F6', inactivo: '#94A3B8' }
-const tipoColors = { miembro: '#1E3A5F', visitante: '#8B5CF6', 'servidor laico': '#C9A84C', pastor: '#EF4444' }
+const statusColors = { activo: '#10B981', visitante: '#3B82F6', inactivo: '#94A3B8', 'en disciplina': '#EF4444' }
+const tipoColors = { miembro: '#1E3A5F', visitante: '#8B5CF6', servidor: '#C9A84C' }
 
 export default function Members() {
   const [members, setMembers] = useState([])
@@ -36,8 +36,8 @@ export default function Members() {
     const { data, error } = await supabase.from('miembros').insert([{
       nombre: formData.nombre,
       apellido: formData.apellido,
-      tipo: formData.tipo || 'miembro',
-      estado: 'activo',
+      tipo: formData.tipo,
+      estado: formData.estado,
       telefono: formData.telefono || null,
       email: formData.email || null,
     }]).select()
@@ -53,8 +53,8 @@ export default function Members() {
   }
 
   async function handleDeleteMember(id) {
-    if (!confirm('¿Desactivar este miembro?')) return
-    await supabase.from('miembros').update({ estado: 'inactivo' }).eq('id', id)
+    if (!confirm('¿Eliminar este miembro?')) return
+    await supabase.from('miembros').delete().eq('id', id)
     loadMembers()
     setSelected(null)
   }
@@ -175,7 +175,7 @@ export default function Members() {
               <div className="modal-avatar" style={{ background: `linear-gradient(135deg, ${tipoColors[selected.tipo] || '#1E3A5F'} 0%, #152942 100%)` }}>
                 {getInitials(selected)}
               </div>
-              <div>
+              <div className="modal-header-info">
                 <h2>{selected.nombre} {selected.apellido}</h2>
                 <span className="role-badge" style={{ background: `${tipoColors[selected.tipo] || '#1E3A5F'}15`, color: tipoColors[selected.tipo] || '#1E3A5F' }}>
                   {selected.tipo || 'miembro'}
@@ -210,8 +210,8 @@ export default function Members() {
                 </div>
               </div>
               <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
-                <button className="btn-primary" style={{ background: '#EF4444' }} onClick={() => handleDeleteMember(selected.id)}>
-                  Desactivar
+                <button className="btn-danger" onClick={() => handleDeleteMember(selected.id)}>
+                  <Trash2 size={16} /> Eliminar
                 </button>
               </div>
             </div>
@@ -227,7 +227,7 @@ export default function Members() {
 }
 
 function AddMemberModal({ onClose, onSubmit }) {
-  const [form, setForm] = useState({ nombre: '', apellido: '', tipo: 'miembro', telefono: '', email: '' })
+  const [form, setForm] = useState({ nombre: '', apellido: '', tipo: 'miembro', estado: 'activo', telefono: '', email: '' })
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -252,14 +252,25 @@ function AddMemberModal({ onClose, onSubmit }) {
               <input value={form.apellido} onChange={e => setForm({ ...form, apellido: e.target.value })} required />
             </div>
           </div>
-          <div className="login-field">
-            <label>Tipo</label>
-            <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
-              <option value="miembro">Miembro</option>
-              <option value="visitante">Visitante</option>
-              <option value="servidor laico">Servidor Laico</option>
-              <option value="pastor">Pastor</option>
-            </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="login-field">
+              <label>Tipo</label>
+              <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value, estado: e.target.value === 'visitante' ? 'activo' : 'activo' })}>
+                <option value="miembro">Miembro</option>
+                <option value="servidor">Servidor</option>
+                <option value="visitante">Visitante</option>
+              </select>
+            </div>
+            {form.tipo !== 'visitante' && (
+              <div className="login-field">
+                <label>Estado</label>
+                <select value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value })}>
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                  <option value="en disciplina">En Disciplina</option>
+                </select>
+              </div>
+            )}
           </div>
           <div className="login-field">
             <label>Email</label>
