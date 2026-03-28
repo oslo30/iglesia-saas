@@ -32,15 +32,21 @@ export default function Members() {
   }
 
   async function handleAddMember(formData) {
-    const { error } = await supabase.from('miembros').insert([{
+    console.log('Guardando miembro:', formData)
+    const { data, error } = await supabase.from('miembros').insert([{
       nombre: formData.nombre,
       apellido: formData.apellido,
       tipo: formData.tipo || 'miembro',
       estado: 'activo',
       telefono: formData.telefono || null,
       email: formData.email || null,
-    }])
-    if (!error) {
+    }]).select()
+
+    if (error) {
+      console.error('Error al guardar:', error)
+      alert('Error al guardar: ' + error.message)
+    } else {
+      console.log('Guardado exitoso:', data)
       loadMembers()
       setShowAddModal(false)
     }
