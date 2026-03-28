@@ -115,7 +115,7 @@ export default function Donations() {
         supabase.from('diezmos').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
         supabase.from('ofrendas').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
         supabase.from('donaciones_especiales').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
-        supabase.from('egresos').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
+        supabase.from('gastos').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
         supabase.from('miembros').select('id, nombre, apellido').eq('estado', 'activo').order('apellido'),
       ])
 
@@ -254,7 +254,7 @@ export default function Donations() {
 
   async function handleSaveEgreso(formData) {
     const { descripcion, monto, metodo, categoria } = formData;
-    const { error } = await supabase.from('egresos').insert([{
+    const { error } = await supabase.from('gastos').insert([{
       descripcion,
       monto: Number(monto),
       metodo,
