@@ -255,7 +255,7 @@ export default function Donations() {
   async function handleSaveEgreso(formData) {
     const { descripcion, monto, metodo, categoria } = formData;
     const { error } = await supabase.from('gastos').insert([{
-      descripcion,
+      concepto: descripcion,
       monto: Number(monto),
       metodo,
       categoria
