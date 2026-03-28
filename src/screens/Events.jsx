@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
-import { Plus, Search, Calendar, Clock, MapPin, X, Users } from 'lucide-react'
+import { Plus, Calendar, Clock, MapPin, X } from 'lucide-react'
 
 export default function Events({ showToast }) {
   const [events, setEvents] = useState([])
@@ -63,13 +63,28 @@ export default function Events({ showToast }) {
     }
   }
 
+  function getEventStatus(event) {
+    const now = new Date()
+    const eventDate = new Date(event.fecha_hora)
+    const endDate = new Date(eventDate.getTime() + 3 * 60 * 60 * 1000) // Asume 3 horas de duracion
+
+    if (now < eventDate) {
+      return { status: 'proximo', label: 'Próximo', class: 'badge-info' }
+    } else if (now >= eventDate && now <= endDate) {
+      return { status: 'actual', label: 'En Progreso', class: 'badge-success' }
+    } else {
+      return { status: 'pasado', label: 'Finalizado', class: 'badge-default' }
+    }
+  }
+
   const filteredEvents = events.filter(e => {
     if (filter === 'all') return true
     return e.tipo === filter
   })
 
-  const upcomingEvents = filteredEvents.filter(e => new Date(e.fecha_hora) >= new Date())
-  const pastEvents = filteredEvents.filter(e => new Date(e.fecha_hora) < new Date())
+  const now = new Date()
+  const upcomingEvents = filteredEvents.filter(e => new Date(e.fecha_hora) > now)
+  const pastEvents = filteredEvents.filter(e => new Date(e.fecha_hora) <= now)
 
   function formatDate(dateStr) {
     return new Date(dateStr).toLocaleDateString('es-CO', {
@@ -109,110 +124,141 @@ export default function Events({ showToast }) {
         <button className={`filter-chip ${filter === 'comunitario' ? 'active' : ''}`} onClick={() => setFilter('comunitario')}>Comunitario</button>
       </div>
 
-      <div className="card">
-        <div className="card-header">
-          <h3>Próximos Eventos</h3>
-          <span>{upcomingEvents.length} eventos</span>
-        </div>
+      {upcomingEvents.length > 0 && (
+        <div className="card" style={{ marginBottom: 24 }}>
+          <div className="card-header">
+            <h3>Próximos Eventos</h3>
+            <span>{upcomingEvents.length} eventos</span>
+          </div>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>Cargando...</div>
-        ) : upcomingEvents.length === 0 ? (
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>Cargando...</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 16 }}>
+              {upcomingEvents.map(event => {
+                const statusInfo = getEventStatus(event)
+                return (
+                  <div key={event.id} style={{
+                    display: 'flex',
+                    gap: 16,
+                    padding: 16,
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius)',
+                    borderLeft: '4px solid var(--info)',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{
+                      width: 60,
+                      height: 60,
+                      background: 'var(--info)',
+                      borderRadius: 'var(--radius)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white'
+                    }}>
+                      <span style={{ fontSize: 11, textTransform: 'uppercase' }}>
+                        {new Date(event.fecha_hora).toLocaleDateString('es-CO', { month: 'short' })}
+                      </span>
+                      <span style={{ fontSize: 20, fontWeight: 700 }}>
+                        {new Date(event.fecha_hora).getDate()}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <h4 style={{ fontWeight: 600 }}>{event.nombre}</h4>
+                        <span className={`badge ${statusInfo.class}`}>{statusInfo.label}</span>
+                        <span className="badge badge-default">{event.tipo}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--text-secondary)' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Clock size={14} /> {formatTime(event.fecha_hora)}
+                        </span>
+                        {event.caracter && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <MapPin size={14} /> {event.caracter}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => handleDelete(event.id)}
+                      style={{ color: 'var(--danger)' }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {pastEvents.length > 0 && (
+        <div className="card" style={{ marginBottom: 24 }}>
+          <div className="card-header">
+            <h3>Eventos Pasados</h3>
+            <span>{pastEvents.length} eventos</span>
+          </div>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {pastEvents.slice(0, 10).map(event => {
+              const statusInfo = getEventStatus(event)
+              return (
+                <div key={event.id} style={{
+                  display: 'flex',
+                  gap: 16,
+                  padding: 12,
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 'var(--radius)',
+                  alignItems: 'center',
+                  opacity: 0.8
+                }}>
+                  <div style={{
+                    width: 50,
+                    height: 50,
+                    background: 'var(--text-muted)',
+                    borderRadius: 'var(--radius)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white'
+                  }}>
+                    <span style={{ fontSize: 10, textTransform: 'uppercase' }}>
+                      {new Date(event.fecha_hora).toLocaleDateString('es-CO', { month: 'short' })}
+                    </span>
+                    <span style={{ fontSize: 16, fontWeight: 700 }}>
+                      {new Date(event.fecha_hora).getDate()}
+                    </span>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                      <h4 style={{ fontWeight: 500, fontSize: 14 }}>{event.nombre}</h4>
+                      <span className={`badge ${statusInfo.class}`}>{statusInfo.label}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                      {formatDate(event.fecha_hora)} - {formatTime(event.fecha_hora)}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {upcomingEvents.length === 0 && pastEvents.length === 0 && !loading && (
+        <div className="card">
           <div className="empty-state">
             <Calendar size={64} />
-            <h3>No hay eventos próximos</h3>
+            <h3>No hay eventos</h3>
             <p>Crea tu primer evento</p>
             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
               <Plus size={18} /> Nuevo Evento
             </button>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: 16 }}>
-            {upcomingEvents.map(event => (
-              <div key={event.id} style={{
-                display: 'flex',
-                gap: 16,
-                padding: 16,
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                alignItems: 'center'
-              }}>
-                <div style={{
-                  width: 60,
-                  height: 60,
-                  background: 'var(--primary)',
-                  borderRadius: 'var(--radius)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white'
-                }}>
-                  <span style={{ fontSize: 11, textTransform: 'uppercase' }}>
-                    {new Date(event.fecha_hora).toLocaleDateString('es-CO', { month: 'short' })}
-                  </span>
-                  <span style={{ fontSize: 20, fontWeight: 700 }}>
-                    {new Date(event.fecha_hora).getDate()}
-                  </span>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <h4 style={{ fontWeight: 600 }}>{event.nombre}</h4>
-                    <span className="badge badge-default">{event.tipo}</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--text-secondary)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Clock size={14} /> {formatTime(event.fecha_hora)}
-                    </span>
-                    {event.caracter && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <MapPin size={14} /> {event.caracter}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => handleDelete(event.id)}
-                    style={{ color: 'var(--danger)' }}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {pastEvents.length > 0 && (
-        <div className="card" style={{ marginTop: 24 }}>
-          <div className="card-header">
-            <h3>Eventos Pasados</h3>
-          </div>
-          <div style={{ display: 'grid', gap: 12 }}>
-            {pastEvents.slice(0, 5).map(event => (
-              <div key={event.id} style={{
-                display: 'flex',
-                gap: 16,
-                padding: 12,
-                border: '1px solid var(--border-light)',
-                borderRadius: 'var(--radius)',
-                alignItems: 'center',
-                opacity: 0.7
-              }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <h4 style={{ fontWeight: 500, fontSize: 14 }}>{event.nombre}</h4>
-                    <span className="badge badge-default">{event.tipo}</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    {formatDate(event.fecha_hora)}
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
