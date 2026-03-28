@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build -- --legacy-peer-deps"
+  command = "npm run build"
   publish = "dist"
   node_bundler = "esbuild"
 
