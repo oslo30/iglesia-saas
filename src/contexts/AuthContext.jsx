@@ -11,14 +11,21 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let isMounted = true
+    let safetyTimeout
 
-    // Timeout de seguridad
-    const safetyTimeout = setTimeout(() => {
+    // Timeout de seguridad - solo 5 segundos
+    const startTime = Date.now()
+    safetyTimeout = setTimeout(() => {
       if (isMounted && loading) {
         console.warn('Auth timeout - proceeding without perfil')
         setLoading(false)
+        setPerfil({
+          rol: 'portero',
+          nombre: 'Usuario',
+          nuevo: true
+        })
       }
-    }, 10000)
+    }, 5000)
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!isMounted) return
@@ -52,52 +59,53 @@ export function AuthProvider({ children }) {
     )
 
     async function fetchPerfil(userId) {
-    if (fetchingPerfil.current) return
-    fetchingPerfil.current = true
+      if (fetchingPerfil.current) return
+      fetchingPerfil.current = true
 
-    try {
-      // Solo obtener datos de usuarios_sistema, sin join a miembros
-      const { data, error } = await supabase
-        .from('usuarios_sistema')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle()
+      try {
+        const { data, error } = await supabase
+          .from('usuarios_sistema')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle()
 
-      if (!isMounted) return
+        if (!isMounted) return
 
-      if (error) {
-        console.warn('Error fetching perfil:', error.message)
-        setPerfil({
-          rol: 'portero',
-          nombre: user?.email || 'Usuario',
-          nuevo: true
-        })
-      } else if (data) {
-        setPerfil({
-          ...data,
-          nombre: data.nombre_display || user?.email,
-        })
-      } else {
-        setPerfil({
-          rol: 'portero',
-          nombre: user?.email || 'Usuario',
-          nuevo: true
-        })
+        if (error) {
+          console.warn('Error fetching perfil:', error.message)
+          setPerfil({
+            rol: 'portero',
+            nombre: user?.email || 'Usuario',
+            nuevo: true
+          })
+        } else if (data) {
+          setPerfil({
+            ...data,
+            nombre: data.nombre_display || user?.email,
+          })
+        } else {
+          setPerfil({
+            rol: 'portero',
+            nombre: user?.email || 'Usuario',
+            nuevo: true
+          })
+        }
+      } catch (err) {
+        console.error('fetchPerfil error:', err)
+        if (isMounted) {
+          setPerfil({
+            rol: 'portero',
+            nombre: user?.email || 'Usuario',
+            nuevo: true
+          })
+        }
+      } finally {
+        fetchingPerfil.current = false
+        if (isMounted) {
+          setLoading(false)
+        }
       }
-    } catch (err) {
-      console.error('fetchPerfil error:', err)
-      if (isMounted) {
-        setPerfil({
-          rol: 'portero',
-          nombre: user?.email || 'Usuario',
-          nuevo: true
-        })
-      }
-    } finally {
-      fetchingPerfil.current = false
-      if (isMounted) setLoading(false)
     }
-  }
 
     return () => {
       isMounted = false

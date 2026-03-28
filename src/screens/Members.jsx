@@ -75,6 +75,11 @@ export default function Members() {
   }
 
   async function handleDeleteMember(id) {
+    console.log('ID a eliminar:', id)
+    if (!id || id === 'new') {
+      alert('Error: ID de miembro inválido')
+      return
+    }
     if (!confirm('¿Eliminar este miembro?')) return
     const { error } = await supabase.from('miembros').delete().eq('id', id)
     if (error) {

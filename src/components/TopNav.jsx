@@ -18,7 +18,7 @@ export default function TopNav({ title, subtitle }) {
     if (perfil?.id) {
       loadNotifications()
     }
-  }, [perfil])
+  }, [perfil?.id])
 
   async function loadNotifications() {
     const { data } = await supabase

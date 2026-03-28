@@ -80,11 +80,13 @@ export default function Donations() {
   const [showExport, setShowExport] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [toast, setToast] = useState(null);
+  const [showEgresoModal, setShowEgresoModal] = useState(false);
 
   // Data states
   const [diezmos, setDiezmos] = useState([]);
   const [ofrendas, setOfrendas] = useState([]);
   const [especiales, setEspeciales] = useState([]);
+  const [egresos, setEgresos] = useState([]);
   const [miembros, setMiembros] = useState([]);
 
   useEffect(() => {
@@ -109,25 +111,28 @@ export default function Donations() {
     sixMonthsAgo.setHours(0, 0, 0, 0)
 
     try {
-      const [dzRes, ofRes, espRes, mbsRes] = await Promise.all([
+      const [dzRes, ofRes, espRes, egRes, mbsRes] = await Promise.all([
         supabase.from('diezmos').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
         supabase.from('ofrendas').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
         supabase.from('donaciones_especiales').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
+        supabase.from('egresos').select('*').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: false }),
         supabase.from('miembros').select('id, nombre, apellido').eq('estado', 'activo').order('apellido'),
       ])
 
       const dz = dzRes.data || []
       const of = ofRes.data || []
       const esp = espRes.data || []
+      const eg = egRes.data || []
       const mbs = mbsRes.data || []
 
       // Guardar en cache
-      cachedData = { diezmos: dz, ofrendas: of, especiales: esp, miembros: mbs }
+      cachedData = { diezmos: dz, ofrendas: of, especiales: esp, egresos: eg, miembros: mbs }
       lastFetch = Date.now()
 
       setDiezmos(dz)
       setOfrendas(of)
       setEspeciales(esp)
+      setEgresos(eg)
       setMiembros(mbs)
     } catch (err) {
       console.error('Error cargando finanzas:', err)
@@ -171,17 +176,19 @@ export default function Donations() {
   })();
 
   // Summary KPIs
-  const totalRecibido = [...diezmos, ...ofrendas, ...especiales].reduce((s, d) => s + Number(d.monto), 0);
+  const totalIngresos = [...diezmos, ...ofrendas, ...especiales].reduce((s, d) => s + Number(d.monto), 0);
+  const totalEgresos = egresos.reduce((s, e) => s + Number(e.monto), 0);
+  const presupuestoDisponible = totalIngresos - totalEgresos;
   const mesActual = new Date().toLocaleDateString('es-ES', { month: 'long' });
   const diezmosMes = diezmos.filter(d => d.mes === mesActual).reduce((s, d) => s + Number(d.monto), 0);
-  const pendientes = [...diezmos, ...especiales].filter(d => d.estado === 'pendiente').reduce((s, d) => s + Number(d.monto), 0);
+  const egresosMes = egresos.filter(e => new Date(e.created_at).toLocaleDateString('es-ES', { month: 'long' }) === mesActual).reduce((s, e) => s + Number(e.monto), 0);
   const donorsCount = new Set([...diezmos.map(d => d.miembro_id), ...especiales.map(e => e.nombre)]).size;
 
   const summaryCards = [
-    { label: 'Total Recibido', value: fmtM(totalRecibido), change: '', trend: 'up', icon: DollarSign, color: '#1E3A5F' },
-    { label: `Este Mes (${mesActual})`, value: fmtM(diezmosMes), change: '', trend: 'up', icon: TrendingUp, color: '#10B981' },
-    { label: 'Pendiente', value: fmtM(pendientes), change: '', trend: 'neutral', icon: Clock, color: '#F59E0B' },
-    { label: 'Donantes Activos', value: donorsCount.toString(), change: '', trend: 'up', icon: CreditCard, color: '#8B5CF6' },
+    { label: 'Total Ingresos', value: fmtM(totalIngresos), change: '', trend: 'up', icon: DollarSign, color: '#10B981' },
+    { label: 'Total Egresos', value: fmtM(totalEgresos), change: '', trend: 'down', icon: ArrowUpRight, color: '#EF4444' },
+    { label: 'Presupuesto Disponible', value: fmtM(presupuestoDisponible), change: '', trend: presupuestoDisponible >= 0 ? 'up' : 'down', icon: TrendingUp, color: '#1E3A5F' },
+    { label: `Egresos del Mes`, value: fmtM(egresosMes), change: '', trend: 'neutral', icon: Clock, color: '#F59E0B' },
   ];
 
   // Combined transactions
@@ -245,6 +252,25 @@ export default function Donations() {
     }
   }
 
+  async function handleSaveEgreso(formData) {
+    const { descripcion, monto, metodo, categoria } = formData;
+    const { error } = await supabase.from('egresos').insert([{
+      descripcion,
+      monto: Number(monto),
+      metodo,
+      categoria
+    }]);
+
+    if (error) {
+      setToast({ message: 'Error al guardar egreso: ' + error.message, type: 'error' });
+    } else {
+      setToast({ message: 'Egreso registrado con éxito', type: 'success' });
+      setShowEgresoModal(false);
+      cachedData = null;
+      loadData();
+    }
+  }
+
   function handleExport(format) {
     const headers = ['Tipo', 'Nombre', 'Método', 'Monto', 'Estado', 'Fecha'];
     const rows = filteredTx.map(t => [t.type, t.name, t.method, t.amount, t.status, t.date]);
@@ -288,9 +314,10 @@ export default function Donations() {
           <p className="text-muted">Controla las contribuciones y genera reportes financieros</p>
         </div>
         <div className="header-actions">
-          <button className="btn-export" onClick={() => setRefreshKey(k => k + 1)}><RefreshCw size={16} /> Actualizar</button>
+          <button className="btn-export" onClick={() => { cachedData = null; loadData(); }}><RefreshCw size={16} /> Actualizar</button>
           <button className="btn-export" onClick={() => setShowExport(true)}><Download size={16} /> Exportar</button>
-          <button className="btn-primary" onClick={() => setShowForm(true)}><Plus size={16} /> Registrar Ingreso</button>
+          <button className="btn-primary" onClick={() => setShowForm(true)}><Plus size={16} /> Ingreso</button>
+          <button className="btn-egreso" onClick={() => setShowEgresoModal(true)}><Plus size={16} /> Egreso</button>
         </div>
       </div>
 
@@ -467,6 +494,10 @@ export default function Donations() {
       )}
 
       {toast && <Toast message={toast.message} onClose={() => setToast(null)} type={toast.type} />}
+
+      {showEgresoModal && (
+        <EgresoModal onClose={() => setShowEgresoModal(false)} onSubmit={handleSaveEgreso} />
+      )}
     </div>
   );
 }
@@ -571,6 +602,72 @@ function DonationFormModal({ onClose, onSubmit, miembros }) {
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
             <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EgresoModal({ onClose, onSubmit }) {
+  const [form, setForm] = useState({ descripcion: '', monto: '', metodo: 'Efectivo', categoria: 'general' });
+
+  const categoriaOptions = [
+    { value: 'general', label: 'Gasto General' },
+    { value: 'limpieza', label: 'Limpieza' },
+    { value: 'mantenimiento', label: 'Mantenimiento' },
+    { value: 'utiles', label: 'Útiles de Oficina' },
+    { value: 'servicios', label: 'Servicios' },
+    { value: 'comida', label: 'Comida/Refrigerios' },
+    { value: 'transporte', label: 'Transporte' },
+    { value: 'otros', label: 'Otros' },
+  ];
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    onSubmit(form);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="event-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+        <div className="modal-header" style={{ borderTopColor: '#EF4444' }}>
+          <h2>Registrar Egreso</h2>
+          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="login-field">
+            <label>Descripción del gasto</label>
+            <input value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} required placeholder="Ej: Compra de útiles de limpieza" />
+          </div>
+
+          <div className="login-field">
+            <label>Monto (COP)</label>
+            <input type="number" value={form.monto} onChange={e => setForm({ ...form, monto: e.target.value })} required placeholder="Ej: 50000" min="1000" />
+          </div>
+
+          <div className="login-field">
+            <label>Categoría</label>
+            <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}>
+              {categoriaOptions.map(c => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="login-field">
+            <label>Método de Pago</label>
+            <select value={form.metodo} onChange={e => setForm({ ...form, metodo: e.target.value })}>
+              <option value="Efectivo">Efectivo</option>
+              <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+              <option value="Billetera Digital">Billetera Digital</option>
+              <option value="Cheque">Cheque</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
+            <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn-primary">Guardar Egreso</button>
           </div>
         </form>
       </div>
