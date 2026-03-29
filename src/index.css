@@ -462,6 +462,42 @@ body {
   color: var(--danger);
 }
 
+.stat-variacion {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+.stat-variacion.up   { background: var(--success-light); color: var(--success); }
+.stat-variacion.down { background: var(--danger-light);  color: var(--danger);  }
+
+.period-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: var(--bg-secondary);
+  padding: 6px;
+  border-radius: var(--radius);
+  width: fit-content;
+}
+.period-tab {
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.period-tab:hover { background: var(--bg); color: var(--text); }
+.period-tab.active { background: var(--primary); color: #fff; }
+
 /* Tables */
 .table-container {
   overflow-x: auto;

@@ -3,7 +3,9 @@ import { supabase } from './supabase'
 import Login from './screens/Login'
 import Dashboard from './screens/Dashboard'
 import Members from './screens/Members'
-import Donations from './screens/Donations'
+import Finanzas from './screens/Finanzas'
+import Egresos from './screens/Egresos'
+import Proyectos from './screens/Proyectos'
 import Attendance from './screens/Attendance'
 import Events from './screens/Events'
 import Sidebar from './components/Sidebar'
@@ -79,7 +81,9 @@ export default function App() {
   const screens = {
     dashboard: <Dashboard showToast={showToast} />,
     members: <Members showToast={showToast} />,
-    donations: <Donations showToast={showToast} />,
+    finanzas: <Finanzas showToast={showToast} />,
+    egresos: <Egresos showToast={showToast} />,
+    proyectos: <Proyectos showToast={showToast} />,
     attendance: <Attendance showToast={showToast} />,
     events: <Events showToast={showToast} />,
   }

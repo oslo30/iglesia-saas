@@ -1,11 +1,13 @@
-import { Home, Users, DollarSign, Calendar, LogOut, Church } from 'lucide-react'
+import { Home, Users, DollarSign, Calendar, LogOut, Church, TrendingDown, FolderOpen } from 'lucide-react'
 
 const menuItems = [
-  { id: 'dashboard', label: 'Panel Principal', icon: Home },
-  { id: 'members', label: 'Miembros', icon: Users },
-  { id: 'donations', label: 'Finanzas', icon: DollarSign },
-  { id: 'attendance', label: 'Asistencia', icon: Calendar },
-  { id: 'events', label: 'Eventos', icon: Calendar },
+  { id: 'dashboard',  label: 'Panel Principal', icon: Home },
+  { id: 'members',    label: 'Miembros',        icon: Users },
+  { id: 'finanzas',   label: 'Finanzas',        icon: DollarSign },
+  { id: 'egresos',    label: 'Egresos',          icon: TrendingDown },
+  { id: 'proyectos',  label: 'Proyectos',       icon: FolderOpen },
+  { id: 'attendance', label: 'Asistencia',     icon: Calendar },
+  { id: 'events',     label: 'Eventos',         icon: Calendar },
 ]
 
 export default function Sidebar({ currentScreen, onNavigate, onLogout, user }) {
