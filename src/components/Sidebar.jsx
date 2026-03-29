@@ -4,10 +4,9 @@ const menuItems = [
   { id: 'dashboard',  label: 'Panel Principal', icon: Home },
   { id: 'members',    label: 'Miembros',        icon: Users },
   { id: 'finanzas',   label: 'Finanzas',        icon: DollarSign },
-  { id: 'egresos',    label: 'Egresos',          icon: TrendingDown },
-  { id: 'proyectos',  label: 'Proyectos',       icon: FolderOpen },
   { id: 'attendance', label: 'Asistencia',     icon: Calendar },
   { id: 'events',     label: 'Eventos',         icon: Calendar },
+  { id: 'proyectos',  label: 'Proyectos',       icon: FolderOpen },
 ]
 
 export default function Sidebar({ currentScreen, onNavigate, onLogout, user }) {

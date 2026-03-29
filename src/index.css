@@ -1098,3 +1098,106 @@ body {
     flex: 1;
   }
 }
+
+/* Finanzas Tabs */
+.finanzas-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border-light);
+  padding-bottom: 0;
+  overflow-x: auto;
+}
+
+.finanzas-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+}
+
+.finanzas-tab:hover {
+  color: var(--primary);
+  background: rgba(0, 81, 154, 0.04);
+}
+
+.finanzas-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+/* Cajas / Fondos Cards */
+.cajas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.caja-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  border: 2px solid var(--border-light);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.caja-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border);
+  transform: translateY(-2px);
+}
+
+.caja-card.active {
+  border-color: var(--caja-color, var(--primary));
+  box-shadow: var(--shadow-md), 0 0 0 3px rgba(0, 81, 154, 0.1);
+}
+
+.caja-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.caja-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.caja-nombre {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.caja-saldo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.caja-saldo-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.caja-saldo-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}

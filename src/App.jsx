@@ -4,7 +4,6 @@ import Login from './screens/Login'
 import Dashboard from './screens/Dashboard'
 import Members from './screens/Members'
 import Finanzas from './screens/Finanzas'
-import Egresos from './screens/Egresos'
 import Proyectos from './screens/Proyectos'
 import Attendance from './screens/Attendance'
 import Events from './screens/Events'
@@ -82,7 +81,6 @@ export default function App() {
     dashboard: <Dashboard showToast={showToast} />,
     members: <Members showToast={showToast} />,
     finanzas: <Finanzas showToast={showToast} />,
-    egresos: <Egresos showToast={showToast} />,
     proyectos: <Proyectos showToast={showToast} />,
     attendance: <Attendance showToast={showToast} />,
     events: <Events showToast={showToast} />,

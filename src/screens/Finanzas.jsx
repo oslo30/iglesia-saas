@@ -1,15 +1,31 @@
 import { useState, useEffect, useRef } from 'react'
 import { Chart, registerables } from 'chart.js'
-import { Plus, Search, DollarSign, X, TrendingUp, TrendingDown } from 'lucide-react'
+import { Plus, Search, DollarSign, X, TrendingUp, TrendingDown, ChevronRight, ChevronLeft, Check, PieChart, Wallet, FileText, LayoutDashboard } from 'lucide-react'
 import { ingresosApi } from '../api/finanzas'
+import Egresos from './Egresos'
 
 Chart.register(...registerables)
 
 const PERIODOS = [
-  { key: 'dia',   label: 'Día' },
+  { key: 'dia', label: 'Día' },
   { key: 'semana', label: 'Semana' },
-  { key: 'mes',   label: 'Mes' },
-  { key: 'anio',  label: 'Año' },
+  { key: 'mes', label: 'Mes' },
+  { key: 'anio', label: 'Año' },
+]
+
+const CAJAS_PREDEFINIDAS = [
+  { id: 'caja_general', nombre: 'Caja General', color: '#00519A' },
+  { id: 'misiones', nombre: 'Misiones', color: '#10B981' },
+  { id: 'construccion', nombre: 'Construcción', color: '#F59E0B' },
+  { id: 'benevolencia', nombre: 'Benevolencia', color: '#8B5CF6' },
+]
+
+const SUB_SCREENS = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'ingresos', label: 'Ingresos', icon: TrendingUp },
+  { id: 'egresos', label: 'Egresos', icon: TrendingDown },
+  { id: 'cajas', label: 'Cajas / Fondos', icon: Wallet },
+  { id: 'reportes', label: 'Reportes', icon: FileText },
 ]
 
 function formatMoney(amount) {
@@ -17,19 +33,51 @@ function formatMoney(amount) {
 }
 
 export default function Finanzas({ showToast }) {
+  const [currentSub, setCurrentSub] = useState('dashboard')
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1>Finanzas</h1>
+          <p>Gestión financiera de la iglesia</p>
+        </div>
+      </div>
+
+      <div className="finanzas-tabs">
+        {SUB_SCREENS.map(screen => {
+          const Icon = screen.icon
+          return (
+            <button
+              key={screen.id}
+              className={`finanzas-tab ${currentSub === screen.id ? 'active' : ''}`}
+              onClick={() => setCurrentSub(screen.id)}
+            >
+              <Icon size={18} />
+              <span>{screen.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {currentSub === 'dashboard' && <DashboardFinanzas showToast={showToast} />}
+      {currentSub === 'ingresos' && <IngresosSection showToast={showToast} />}
+      {currentSub === 'egresos' && <Egresos showToast={showToast} />}
+      {currentSub === 'cajas' && <CajasSection showToast={showToast} />}
+      {currentSub === 'reportes' && <ReportesSection showToast={showToast} />}
+    </div>
+  )
+}
+
+function DashboardFinanzas({ showToast }) {
   const [periodo, setPeriodo] = useState('mes')
   const [resumen, setResumen] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [donations, setDonations] = useState([])
-  const [loadingTable, setLoadingTable] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [search, setSearch] = useState('')
   const chartRef = useRef(null)
   const chartInstance = useRef(null)
 
   useEffect(() => {
     loadResumen()
-    loadDonations()
   }, [periodo])
 
   useEffect(() => {
@@ -53,7 +101,7 @@ export default function Finanzas({ showToast }) {
             {
               label: 'Diezmos',
               data: resumen.por_dia.map(d => d.diezmos),
-              backgroundColor: 'rgba(29, 90, 148, 0.7)',
+              backgroundColor: 'rgba(0, 81, 154, 0.7)',
             },
             {
               label: 'Ofrendas',
@@ -90,15 +138,105 @@ export default function Finanzas({ showToast }) {
     }
   }
 
+  function getWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+    const dayNum = d.getUTCDay() || 7
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
+  }
+
+  const variacion = resumen?.comparativa?.variacion
+  const variacionClass = variacion > 0 ? 'up' : variacion < 0 ? 'down' : ''
+
+  return (
+    <div>
+      <div className="period-tabs" style={{ marginBottom: 20 }}>
+        {PERIODOS.map(p => (
+          <button
+            key={p.key}
+            className={`period-tab ${periodo === p.key ? 'active' : ''}`}
+            onClick={() => setPeriodo(p.key)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="stats-grid">
+        <div className="stat-card" style={{ '--stat-color': 'var(--success)', '--stat-bg': 'rgba(16, 185, 129, 0.1)' }}>
+          <div className="stat-icon" style={{ '--stat-bg': 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
+            <DollarSign size={24} />
+          </div>
+          <div className="stat-label">Total {periodo}</div>
+          <div className="stat-value">{loading ? '...' : formatMoney(resumen?.total)}</div>
+          {variacion != null && (
+            <div className={`stat-variacion ${variacionClass}`}>
+              {variacion > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+              <span>{Math.abs(variacion)}% vs anterior</span>
+            </div>
+          )}
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon" style={{ '--stat-bg': 'rgba(0, 81, 154, 0.1)', color: 'var(--primary)' }}>
+            <TrendingUp size={24} />
+          </div>
+          <div className="stat-label">Diezmos</div>
+          <div className="stat-value">{loading ? '...' : formatMoney(resumen?.diezmos_total)}</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon" style={{ '--stat-bg': 'rgba(201, 168, 76, 0.1)', color: 'var(--accent)' }}>
+            <TrendingUp size={24} />
+          </div>
+          <div className="stat-label">Ofrendas</div>
+          <div className="stat-value">{loading ? '...' : formatMoney(resumen?.ofrendas_total)}</div>
+        </div>
+      </div>
+
+      {!loading && resumen?.por_dia?.length > 0 && (
+        <div className="card" style={{ marginBottom: 24 }}>
+          <div className="card-header">
+            <h3>Detalle por {periodo === 'dia' ? 'día' : periodo === 'semana' ? 'semana' : periodo === 'mes' ? 'mes' : 'año'}</h3>
+          </div>
+          <div style={{ height: 250 }}>
+            <canvas ref={chartRef} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function IngresosSection({ showToast }) {
+  const [donations, setDonations] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [search, setSearch] = useState('')
+  const [resumen, setResumen] = useState(null)
+
+  useEffect(() => {
+    loadDonations()
+    loadResumen()
+  }, [])
+
+  async function loadResumen() {
+    try {
+      const data = await ingresosApi.resumen('mes', { anio: new Date().getFullYear(), mes: new Date().getMonth() + 1 })
+      setResumen(data)
+    } catch {}
+  }
+
   async function loadDonations() {
-    setLoadingTable(true)
+    setLoading(true)
     try {
       const data = await ingresosApi.listar()
       setDonations(data || [])
     } catch (err) {
-      showToast('Error al cargar contribuciones', 'error')
+      showToast('Error al cargar ingresos', 'error')
     } finally {
-      setLoadingTable(false)
+      setLoading(false)
     }
   }
 
@@ -119,19 +257,11 @@ export default function Finanzas({ showToast }) {
       }
       showToast(`${formData.type} registrado correctamente`)
       setShowModal(false)
-      loadResumen()
       loadDonations()
+      loadResumen()
     } catch (err) {
       showToast('Error al guardar: ' + err.message, 'error')
     }
-  }
-
-  function getWeekNumber(date) {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-    const dayNum = d.getUTCDay() || 7
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
   }
 
   const filtered = donations.filter(d =>
@@ -139,16 +269,9 @@ export default function Finanzas({ showToast }) {
     (d.descripcion || '').toLowerCase().includes(search.toLowerCase())
   )
 
-  const variacion = resumen?.comparativa?.variacion
-  const variacionClass = variacion > 0 ? 'up' : variacion < 0 ? 'down' : ''
-
   return (
     <div>
-      <div className="page-header">
-        <div>
-          <h1>Finanzas</h1>
-          <p>Ingresos y métricas financieras</p>
-        </div>
+      <div className="page-header" style={{ marginBottom: 16 }}>
         <div className="page-actions">
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>
             <Plus size={18} /> Registrar Ingreso
@@ -156,68 +279,12 @@ export default function Finanzas({ showToast }) {
         </div>
       </div>
 
-      {/* Selector de período */}
-      <div className="period-tabs">
-        {PERIODOS.map(p => (
-          <button
-            key={p.key}
-            className={`period-tab ${periodo === p.key ? 'active' : ''}`}
-            onClick={() => setPeriodo(p.key)}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Stats */}
-      <div className="stats-grid">
-        <div className="stat-card" style={{ '--stat-color': 'var(--success)', '--stat-bg': 'rgba(16, 185, 129, 0.1)' }}>
-          <div className="stat-icon" style={{ '--stat-bg': 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
-            <DollarSign size={24} />
-          </div>
-          <div className="stat-label">Total {periodo}</div>
-          <div className="stat-value">{loading ? '...' : formatMoney(resumen?.total)}</div>
-          {variacion != null && (
-            <div className={`stat-variacion ${variacionClass}`}>
-              {variacion > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-              <span>{Math.abs(variacion)}% vs anterior</span>
-            </div>
-          )}
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ '--stat-bg': 'rgba(29, 90, 148, 0.1)', color: 'var(--primary)' }}>
-            <TrendingUp size={24} />
-          </div>
-          <div className="stat-label">Diezmos</div>
-          <div className="stat-value">{loading ? '...' : formatMoney(resumen?.diezmos_total)}</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ '--stat-bg': 'rgba(201, 168, 76, 0.1)', color: 'var(--accent)' }}>
-            <TrendingUp size={24} />
-          </div>
-          <div className="stat-label">Ofrendas</div>
-          <div className="stat-value">{loading ? '...' : formatMoney(resumen?.ofrendas_total)}</div>
-        </div>
-      </div>
-
-      {/* Gráfico */}
-      {!loading && resumen?.por_dia?.length > 0 && (
-        <div className="card" style={{ marginBottom: 24 }}>
-          <div className="card-header">
-            <h3>Detalle por {periodo === 'dia' ? 'día' : periodo === 'semana' ? 'semana' : periodo === 'mes' ? 'mes' : 'año'}</h3>
-          </div>
-          <div style={{ height: 250 }}>
-            <canvas ref={chartRef} />
-          </div>
-        </div>
-      )}
-
-      {/* Tabla */}
       <div className="card">
         <div className="card-header">
           <h3>Registro de Ingresos</h3>
+          <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+            Total mes: <strong>{formatMoney(resumen?.total)}</strong>
+          </div>
         </div>
         <div style={{ marginBottom: 16 }}>
           <div className="search-bar">
@@ -231,7 +298,7 @@ export default function Finanzas({ showToast }) {
           </div>
         </div>
 
-        {loadingTable ? (
+        {loading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>Cargando...</div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
@@ -357,6 +424,95 @@ function IngresoModal({ onClose, onSave }) {
             <button type="submit" className="btn btn-primary">Guardar</button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+function CajasSection({ showToast }) {
+  const [selectedCaja, setSelectedCaja] = useState(CAJAS_PREDEFINIDAS[0].id)
+
+  return (
+    <div>
+      <div className="cajas-grid">
+        {CAJAS_PREDEFINIDAS.map(caja => (
+          <div
+            key={caja.id}
+            className={`caja-card ${selectedCaja === caja.id ? 'active' : ''}`}
+            onClick={() => setSelectedCaja(caja.id)}
+            style={{ '--caja-color': caja.color }}
+          >
+            <div className="caja-header">
+              <div className="caja-indicator" style={{ background: caja.color }}></div>
+              <span className="caja-nombre">{caja.nombre}</span>
+            </div>
+            <div className="caja-saldo">
+              <span className="caja-saldo-label">Saldo actual</span>
+              <span className="caja-saldo-value">$0</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card" style={{ marginTop: 24 }}>
+        <div className="card-header">
+          <h3>Movimientos - {CAJAS_PREDEFINIDAS.find(c => c.id === selectedCaja)?.nombre}</h3>
+        </div>
+        <div className="empty-state">
+          <Wallet size={48} />
+          <h3>Sin movimientos</h3>
+          <p>Los ingresos y egresos pronto afectarán esta caja</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ReportesSection({ showToast }) {
+  const [reporteTipo, setReporteTipo] = useState('mensual')
+
+  return (
+    <div>
+      <div className="stats-grid" style={{ marginBottom: 24 }}>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ '--stat-bg': 'rgba(0, 81, 154, 0.1)', color: 'var(--primary)' }}>
+            <TrendingUp size={24} />
+          </div>
+          <div className="stat-label">Ingresos año</div>
+          <div className="stat-value">$0</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ '--stat-bg': 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)' }}>
+            <TrendingDown size={24} />
+          </div>
+          <div className="stat-label">Egresos año</div>
+          <div className="stat-value">$0</div>
+        </div>
+        <div className="stat-card" style={{ '--stat-color': 'var(--success)', '--stat-bg': 'rgba(16, 185, 129, 0.1)' }}>
+          <div className="stat-icon" style={{ '--stat-bg': 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
+            <DollarSign size={24} />
+          </div>
+          <div className="stat-label">Balance año</div>
+          <div className="stat-value">$0</div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h3>Reportes</h3>
+        </div>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+          <select value={reporteTipo} onChange={e => setReporteTipo(e.target.value)}>
+            <option value="mensual">Mensual</option>
+            <option value="trimestral">Trimestral</option>
+            <option value="anual">Anual</option>
+          </select>
+        </div>
+        <div className="empty-state">
+          <PieChart size={48} />
+          <h3>Sin datos para Reportar</h3>
+          <p>Genera ingresos y egresos para ver reportes</p>
+        </div>
       </div>
     </div>
   )
