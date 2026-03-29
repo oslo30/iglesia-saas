@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
-import { Plus, Search, Pencil, Trash2, X, Users, Phone, Mail, Calendar, ChevronRight, ChevronLeft, Heart, Briefcase, FileText, Home, Church, User, Check } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, X, Users, Phone, Mail, Calendar, ChevronRight, ChevronLeft, Heart, Briefcase, FileText, Home, Church, User, Check, Eye, Clock, MapPin, Briefcase as BriefcaseIcon, Users as UsersIcon } from 'lucide-react'
 
 const steps = [
   { id: 1, label: 'Datos Personales', icon: User },
@@ -19,6 +19,7 @@ export default function Members({ showToast }) {
   const [editingMember, setEditingMember] = useState(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+  const [selectedMember, setSelectedMember] = useState(null)
 
   useEffect(() => {
     loadMembers()
@@ -79,11 +80,11 @@ export default function Members({ showToast }) {
 
   async function handleDelete(id) {
     if (!confirm('¿Estás seguro de eliminar este miembro?')) return
-
     try {
       const { error } = await supabase.from('miembros').delete().eq('id', id)
       if (error) throw error
       showToast('Miembro eliminado')
+      setSelectedMember(null)
       loadMembers()
     } catch (err) {
       console.error('Error:', err)
@@ -92,20 +93,35 @@ export default function Members({ showToast }) {
   }
 
   const filteredMembers = members.filter(m => {
+    const searchLower = search.toLowerCase()
     const matchesSearch =
-      `${m.nombre} ${m.apellido}`.toLowerCase().includes(search.toLowerCase()) ||
-      (m.email || '').toLowerCase().includes(search.toLowerCase()) ||
-      (m.numero_documento || '').toLowerCase().includes(search.toLowerCase())
-    const matchesFilter = filter === 'all' || m.estado === filter || m.tipo_miembro === filter
+      !search ||
+      `${m.nombre} ${m.apellido}`.toLowerCase().includes(searchLower) ||
+      (m.email || '').toLowerCase().includes(searchLower) ||
+      (m.celular || '').toLowerCase().includes(searchLower) ||
+      (m.numero_documento || '').toLowerCase().includes(searchLower)
+
+    let matchesFilter = true
+    if (filter === 'activo') matchesFilter = m.estado === 'activo'
+    else if (filter === 'inactivo') matchesFilter = m.estado === 'inactivo'
+    else if (filter === 'visitante') matchesFilter = m.tipo_miembro === 'visitante_frecuente'
+
     return matchesSearch && matchesFilter
   })
+
+  const filterCounts = {
+    all: members.length,
+    activo: members.filter(m => m.estado === 'activo').length,
+    inactivo: members.filter(m => m.estado === 'inactivo').length,
+    visitante: members.filter(m => m.tipo_miembro === 'visitante_frecuente').length,
+  }
 
   return (
     <div>
       <div className="page-header">
         <div>
           <h1>Miembros</h1>
-          <p>Gestiona los miembros de tu iglesia</p>
+          <p>{members.length} miembros registrados</p>
         </div>
         <div className="page-actions">
           <button className="btn btn-primary" onClick={() => { setEditingMember(null); setShowModal(true) }}>
@@ -114,100 +130,88 @@ export default function Members({ showToast }) {
         </div>
       </div>
 
-      <div className="card">
-        <div style={{ marginBottom: 20 }}>
-          <div className="search-bar">
-            <Search size={18} />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, correo o documento..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="filters-bar" style={{ marginTop: 12 }}>
-            <button className={`filter-chip ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>Todos</button>
-            <button className={`filter-chip ${filter === 'activo' ? 'active' : ''}`} onClick={() => setFilter('activo')}>Activos</button>
-            <button className={`filter-chip ${filter === 'inactivo' ? 'active' : ''}`} onClick={() => setFilter('inactivo')}>Inactivos</button>
-            <button className={`filter-chip ${filter === 'visitante_frecuente' ? 'active' : ''}`} onClick={() => setFilter('visitante_frecuente')}>Visitantes</button>
-          </div>
+      {/* Search & Filters */}
+      <div className="members-toolbar">
+        <div className="search-bar" style={{ maxWidth: 400 }}>
+          <Search size={18} />
+          <input
+            type="text"
+            placeholder="Buscar por nombre, email o teléfono..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
+        <div className="filter-chips">
+          <button
+            className={`filter-chip ${filter === 'all' ? 'active' : ''}`}
+            onClick={() => setFilter('all')}
+          >
+            Todos <span className="chip-count">{filterCounts.all}</span>
+          </button>
+          <button
+            className={`filter-chip ${filter === 'activo' ? 'active' : ''}`}
+            onClick={() => setFilter('activo')}
+          >
+            Activos <span className="chip-count">{filterCounts.activo}</span>
+          </button>
+          <button
+            className={`filter-chip ${filter === 'inactivo' ? 'active' : ''}`}
+            onClick={() => setFilter('inactivo')}
+          >
+            Inactivos <span className="chip-count">{filterCounts.inactivo}</span>
+          </button>
+          <button
+            className={`filter-chip ${filter === 'visitante' ? 'active' : ''}`}
+            onClick={() => setFilter('visitante')}
+          >
+            Visitantes <span className="chip-count">{filterCounts.visitante}</span>
+          </button>
+        </div>
+      </div>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>Cargando...</div>
-        ) : filteredMembers.length === 0 ? (
+      {/* Members Grid */}
+      {loading ? (
+        <div className="members-loading">
+          <div className="spinner" />
+        </div>
+      ) : filteredMembers.length === 0 ? (
+        <div className="card">
           <div className="empty-state">
             <Users size={64} />
             <h3>No hay miembros</h3>
-            <p>Comienza agregando tu primer miembro</p>
-            <button className="btn btn-primary" onClick={() => { setEditingMember(null); setShowModal(true) }}>
-              <Plus size={18} /> Agregar Miembro
-            </button>
+            <p>{search ? 'Intenta con otro término de búsqueda' : 'Comienza agregando tu primer miembro'}</p>
+            {!search && (
+              <button className="btn btn-primary" onClick={() => { setEditingMember(null); setShowModal(true) }}>
+                <Plus size={18} /> Agregar Miembro
+              </button>
+            )}
           </div>
-        ) : (
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Miembro</th>
-                  <th>Documento</th>
-                  <th>Contacto</th>
-                  <th>Estado</th>
-                  <th>Ministerio</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredMembers.map(member => (
-                  <tr key={member.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div className="avatar">{member.nombre?.[0]}{member.apellido?.[0]}</div>
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{member.nombre} {member.apellido}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                            {member.fecha_nacimiento ? `Nac: ${member.fecha_nacimiento}` : ''}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: 13 }}>
-                        <div>{member.tipo_documento} {member.numero_documento}</div>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                        {member.email && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {member.email}</div>}
-                        {member.celular && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={12} /> {member.celular}</div>}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`badge ${member.estado === 'activo' ? 'badge-success' : member.estado === 'inactivo' ? 'badge-warning' : 'badge-default'}`}>
-                        {member.estado}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{member.ministerio || '-'}</div>
-                    </td>
-                    <td>
-                      <div className="table-actions">
-                        <button className="btn btn-ghost btn-sm" onClick={() => { setEditingMember(member); setShowModal(true) }}>
-                          <Pencil size={16} />
-                        </button>
-                        <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(member.id)} style={{ color: 'var(--danger)' }}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="members-grid">
+          {filteredMembers.map(member => (
+            <MemberCard
+              key={member.id}
+              member={member}
+              onView={() => setSelectedMember(member)}
+              onEdit={() => { setEditingMember(member); setShowModal(true) }}
+              onDelete={() => handleDelete(member.id)}
+            />
+          ))}
+        </div>
+      )}
 
+      {/* Member Drawer */}
+      {selectedMember && (
+        <MemberDrawer
+          member={selectedMember}
+          onClose={() => setSelectedMember(null)}
+          onEdit={() => { setEditingMember(selectedMember); setShowModal(true); setSelectedMember(null) }}
+          onDelete={() => handleDelete(selectedMember.id)}
+        />
+      )}
+
+      {/* Modal */}
       {showModal && (
         <MemberModal
           member={editingMember}
@@ -215,6 +219,184 @@ export default function Members({ showToast }) {
           onSave={handleSave}
         />
       )}
+    </div>
+  )
+}
+
+function MemberCard({ member, onView, onEdit, onDelete }) {
+  const initials = `${member.nombre?.[0] || ''}${member.apellido?.[0] || ''}`.toUpperCase()
+  const displayContact = member.celular || member.email || 'Sin contacto'
+
+  function getEstadoBadge(estado) {
+    const map = {
+      activo: { bg: 'rgba(16, 185, 129, 0.1)', color: '#10B981', label: 'Activo' },
+      inactivo: { bg: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', label: 'Inactivo' },
+      suspendido: { bg: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', label: 'Suspendido' },
+    }
+    return map[estado] || { bg: 'rgba(148, 163, 184, 0.1)', color: '#94A3B8', label: estado }
+  }
+
+  function getCompromisoBadge(compromiso) {
+    const map = {
+      'Líder': { bg: 'rgba(0, 81, 154, 0.1)', color: '#00519A' },
+      'Activo': { bg: 'rgba(16, 185, 129, 0.1)', color: '#10B981' },
+      'En formación': { bg: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' },
+      'Nuevo': { bg: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6' },
+    }
+    return map[compromiso] || null
+  }
+
+  const estadoBadge = getEstadoBadge(member.estado)
+  const compromisoBadge = getCompromisoBadge(member.nivel_compromiso)
+
+  return (
+    <div className="member-card" onClick={onView}>
+      <div className="member-card-header">
+        <div className="member-avatar-lg" style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)' }}>
+          {initials}
+        </div>
+        <div className="member-card-actions" onClick={e => e.stopPropagation()}>
+          <button className="member-action-btn" onClick={onView} title="Ver perfil">
+            <Eye size={16} />
+          </button>
+          <button className="member-action-btn" onClick={onEdit} title="Editar">
+            <Pencil size={16} />
+          </button>
+          <button className="member-action-btn danger" onClick={onDelete} title="Eliminar">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="member-card-body">
+        <h3 className="member-name">{member.nombre} {member.apellido}</h3>
+        <p className="member-contact">{displayContact}</p>
+
+        <div className="member-badges">
+          <span className="member-badge" style={{ background: estadoBadge.bg, color: estadoBadge.color }}>
+            {estadoBadge.label}
+          </span>
+          {compromisoBadge && (
+            <span className="member-badge" style={{ background: compromisoBadge.bg, color: compromisoBadge.color }}>
+              {member.nivel_compromiso}
+            </span>
+          )}
+          {member.estado_civil && (
+            <span className="member-badge" style={{ background: 'rgba(148, 163, 184, 0.1)', color: '#64748B' }}>
+              {member.estado_civil}
+            </span>
+          )}
+          {member.ministerio && (
+            <span className="member-badge" style={{ background: 'rgba(201, 168, 76, 0.15)', color: '#B8860B' }}>
+              {member.ministerio}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MemberDrawer({ member, onClose, onEdit, onDelete }) {
+  const initials = `${member.nombre?.[0] || ''}${member.apellido?.[0] || ''}`.toUpperCase()
+
+  return (
+    <div className="drawer-overlay" onClick={onClose}>
+      <div className="drawer" onClick={e => e.stopPropagation()}>
+        <div className="drawer-header">
+          <div className="drawer-title">
+            <div className="member-avatar-xl" style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)' }}>
+              {initials}
+            </div>
+            <div>
+              <h2>{member.nombre} {member.apellido}</h2>
+              <p>{member.email || member.celular || 'Sin contacto'}</p>
+            </div>
+          </div>
+          <button className="drawer-close" onClick={onClose}><X size={20} /></button>
+        </div>
+
+        <div className="drawer-content">
+          {/* Datos Personales */}
+          <div className="drawer-section">
+            <h4 className="drawer-section-title">Datos Personales</h4>
+            <div className="drawer-field">
+              <span className="drawer-label">Documento</span>
+              <span className="drawer-value">{member.tipo_documento} {member.numero_documento}</span>
+            </div>
+            <div className="drawer-field">
+              <span className="drawer-label">Fecha de nacimiento</span>
+              <span className="drawer-value">{member.fecha_nacimiento || 'No registrada'}</span>
+            </div>
+            <div className="drawer-field">
+              <span className="drawer-label">Sexo</span>
+              <span className="drawer-value">{member.sexo || 'No registrado'}</span>
+            </div>
+          </div>
+
+          {/* Contacto */}
+          <div className="drawer-section">
+            <h4 className="drawer-section-title">Contacto</h4>
+            {member.celular && <div className="drawer-field"><span className="drawer-label">Celular</span><span className="drawer-value">{member.celular}</span></div>}
+            {member.telefono_fijo && <div className="drawer-field"><span className="drawer-label">Teléfono</span><span className="drawer-value">{member.telefono_fijo}</span></div>}
+            {member.email && <div className="drawer-field"><span className="drawer-label">Email</span><span className="drawer-value">{member.email}</span></div>}
+            {member.direccion && <div className="drawer-field"><span className="drawer-label">Dirección</span><span className="drawer-value">{member.direccion}</span></div>}
+            {member.ciudad_barrio && <div className="drawer-field"><span className="drawer-label">Ciudad/Barrio</span><span className="drawer-value">{member.ciudad_barrio}</span></div>}
+          </div>
+
+          {/* Estado Familiar */}
+          <div className="drawer-section">
+            <h4 className="drawer-section-title">Estado Familiar</h4>
+            {member.estado_civil && <div className="drawer-field"><span className="drawer-label">Estado civil</span><span className="drawer-value">{member.estado_civil}</span></div>}
+            {member.nombre_conyuge && <div className="drawer-field"><span className="drawer-label">Cónyuge</span><span className="drawer-value">{member.nombre_conyuge}</span></div>}
+            {member.cantidad_hijos && <div className="drawer-field"><span className="drawer-label">Hijos</span><span className="drawer-value">{member.cantidad_hijos}</span></div>}
+          </div>
+
+          {/* Información Espiritual */}
+          <div className="drawer-section">
+            <h4 className="drawer-section-title">Información Espiritual</h4>
+            {member.fecha_conversion && <div className="drawer-field"><span className="drawer-label">Conversión</span><span className="drawer-value">{member.fecha_conversion}</span></div>}
+            {member.esta_bautizado && <div className="drawer-field"><span className="drawer-label">Bautizado en agua</span><span className="drawer-value">{member.esta_bautizado}</span></div>}
+            {member.fecha_bautismo_agua && <div className="drawer-field"><span className="drawer-label">Fecha bautismo</span><span className="drawer-value">{member.fecha_bautismo_agua}</span></div>}
+            {member.bautizado_por && <div className="drawer-field"><span className="drawer-label">Bautizado por</span><span className="drawer-value">{member.bautizado_por}</span></div>}
+            {member.recibio_espiritu_santo && <div className="drawer-field"><span className="drawer-label">Espíritu Santo</span><span className="drawer-value">{member.recibio_espiritu_santo}</span></div>}
+            {member.fecha_bautismo_espiritu && <div className="drawer-field"><span className="drawer-label">Fecha Espíritu Santo</span><span className="drawer-value">{member.fecha_bautismo_espiritu}</span></div>}
+            {member.ministerio && <div className="drawer-field"><span className="drawer-label">Ministerio</span><span className="drawer-value">{member.ministerio}</span></div>}
+            {member.nivel_compromiso && <div className="drawer-field"><span className="drawer-label">Nivel compromiso</span><span className="drawer-value">{member.nivel_compromiso}</span></div>}
+          </div>
+
+          {/* Membresía */}
+          <div className="drawer-section">
+            <h4 className="drawer-section-title">Membresía</h4>
+            {member.fecha_ingreso && <div className="drawer-field"><span className="drawer-label">Fecha ingreso</span><span className="drawer-value">{member.fecha_ingreso}</span></div>}
+            {member.tipo_miembro && <div className="drawer-field"><span className="drawer-label">Tipo</span><span className="drawer-value">{member.tipo_miembro.replace('_', ' ')}</span></div>}
+            {member.estado && <div className="drawer-field"><span className="drawer-label">Estado</span><span className="drawer-value">{member.estado}</span></div>}
+            {member.iglesia_anterior && <div className="drawer-field"><span className="drawer-label">Iglesia anterior</span><span className="drawer-value">{member.iglesia_anterior}</span></div>}
+          </div>
+
+          {/* Laboral */}
+          <div className="drawer-section">
+            <h4 className="drawer-section-title">Información Laboral</h4>
+            {member.profesion && <div className="drawer-field"><span className="drawer-label">Profesión</span><span className="drawer-value">{member.profesion}</span></div>}
+            {member.empresa && <div className="drawer-field"><span className="drawer-label">Empresa</span><span className="drawer-value">{member.empresa}</span></div>}
+            {member.nivel_estudios && <div className="drawer-field"><span className="drawer-label">Estudios</span><span className="drawer-value">{member.nivel_estudios}</span></div>}
+          </div>
+
+          {/* Extra */}
+          <div className="drawer-section">
+            <h4 className="drawer-section-title">Información Adicional</h4>
+            {member.enfermedades && <div className="drawer-field"><span className="drawer-label">Enfermedades</span><span className="drawer-value">{member.enfermedades}</span></div>}
+            {member.discapacidad && <div className="drawer-field"><span className="drawer-label">Discapacidad</span><span className="drawer-value">{member.discapacidad}</span></div>}
+            {member.contacto_emergencia_nombre && <div className="drawer-field"><span className="drawer-label">Contacto emergencia</span><span className="drawer-value">{member.contacto_emergencia_nombre} - {member.contacto_emergencia_telefono}</span></div>}
+            {member.observaciones && <div className="drawer-field"><span className="drawer-label">Observaciones</span><span className="drawer-value">{member.observaciones}</span></div>}
+          </div>
+        </div>
+
+        <div className="drawer-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+          <button className="btn btn-primary" onClick={onEdit}><Pencil size={16} /> Editar</button>
+        </div>
+      </div>
     </div>
   )
 }
