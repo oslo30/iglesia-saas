@@ -43,16 +43,26 @@ export default function Members({ showToast }) {
 
   async function handleSave(formData) {
     try {
+      const dateFields = ['fecha_nacimiento', 'fecha_conversion', 'fecha_bautismo_agua', 'fecha_bautismo_espiritu', 'fecha_ingreso']
+      const cleanedData = {}
+      for (const key in formData) {
+        if (dateFields.includes(key) && formData[key] === '') {
+          cleanedData[key] = null
+        } else {
+          cleanedData[key] = formData[key] || null
+        }
+      }
+
       if (editingMember) {
         const { error } = await supabase
           .from('miembros')
-          .update(formData)
+          .update(cleanedData)
           .eq('id', editingMember.id)
 
         if (error) throw error
         showToast('Miembro actualizado correctamente')
       } else {
-        const { error } = await supabase.from('miembros').insert([formData])
+        const { error } = await supabase.from('miembros').insert([cleanedData])
 
         if (error) throw error
         showToast('Miembro agregado correctamente')
