@@ -360,7 +360,6 @@ export default function Dashboard({ showToast, onNavigate }) {
           <button
             className="quick-action-btn success"
             onClick={() => onNavigate && onNavigate('finanzas')}
-          }
           >
             <div className="quick-action-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}><TrendingUp size={22} /></div>
             <div className="quick-action-text">
@@ -373,7 +372,6 @@ export default function Dashboard({ showToast, onNavigate }) {
           <button
             className="quick-action-btn danger"
             onClick={() => onNavigate && onNavigate('finanzas')}
-          }
           >
             <div className="quick-action-icon" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)' }}><TrendingDown size={22} /></div>
             <div className="quick-action-text">
