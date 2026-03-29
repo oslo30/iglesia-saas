@@ -78,7 +78,7 @@ export default function App() {
   }
 
   const screens = {
-    dashboard: <Dashboard showToast={showToast} />,
+    dashboard: <Dashboard showToast={showToast} onNavigate={setCurrentScreen} />,
     members: <Members showToast={showToast} />,
     finanzas: <Finanzas showToast={showToast} />,
     proyectos: <Proyectos showToast={showToast} />,
