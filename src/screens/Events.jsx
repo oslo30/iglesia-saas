@@ -118,10 +118,11 @@ export default function Events({ showToast }) {
 
       <div className="filters-bar" style={{ marginBottom: 20 }}>
         <button className={`filter-chip ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>Todos</button>
-        <button className={`filter-chip ${filter === 'domingo' ? 'active' : ''}`} onClick={() => setFilter('domingo')}>Domingos</button>
-        <button className={`filter-chip ${filter === 'estudio' ? 'active' : ''}`} onClick={() => setFilter('estudio')}>Estudio</button>
-        <button className={`filter-chip ${filter === 'jovenes' ? 'active' : ''}`} onClick={() => setFilter('jovenes')}>Jóvenes</button>
-        <button className={`filter-chip ${filter === 'comunitario' ? 'active' : ''}`} onClick={() => setFilter('comunitario')}>Comunitario</button>
+        <button className={`filter-chip ${filter === 'dominical_am' ? 'active' : ''}`} onClick={() => setFilter('dominical_am')}>Dominical AM</button>
+        <button className={`filter-chip ${filter === 'dominical_pm' ? 'active' : ''}`} onClick={() => setFilter('dominical_pm')}>Dominical PM</button>
+        <button className={`filter-chip ${filter === 'miercoles' ? 'active' : ''}`} onClick={() => setFilter('miercoles')}>Miércoles</button>
+        <button className={`filter-chip ${filter === 'especial' ? 'active' : ''}`} onClick={() => setFilter('especial')}>Especial</button>
+        <button className={`filter-chip ${filter === 'otro' ? 'active' : ''}`} onClick={() => setFilter('otro')}>Otro</button>
       </div>
 
       {upcomingEvents.length > 0 && (
@@ -278,7 +279,7 @@ function EventModal({ onClose, onSave }) {
     nombre: '',
     fecha: new Date().toISOString().split('T')[0],
     hora: '09:00',
-    tipo: 'domingo',
+    tipo: 'dominical_am',
     lugar: '',
   })
 
@@ -329,10 +330,11 @@ function EventModal({ onClose, onSave }) {
               <div className="form-field">
                 <label>Tipo</label>
                 <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
-                  <option value="domingo">Domingo</option>
-                  <option value="estudio">Estudio Bíblico</option>
-                  <option value="jovenes">Jóvenes</option>
-                  <option value="comunitario">Comunitario</option>
+                  <option value="dominical_am">Servicio Dominical AM</option>
+                  <option value="dominical_pm">Servicio Dominical PM</option>
+                  <option value="miercoles">Miércoles</option>
+                  <option value="especial">Evento Especial</option>
+                  <option value="otro">Otro</option>
                 </select>
               </div>
               <div className="form-field">
