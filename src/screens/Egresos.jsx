@@ -3,11 +3,6 @@ import { Plus, Search, TrendingDown, X, Trash2, Edit2 } from 'lucide-react'
 import { egresosApi, categoriasApi } from '../api/finanzas'
 import EgresoModal from '../components/EgresoModal'
 
-const ESTADO_COLORS = {
-  operativo: { bg: 'rgba(29, 90, 148, 0.1)', color: 'var(--primary)' },
-  proyecto:   { bg: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' },
-}
-
 function formatMoney(amount) {
   return '$' + Number(amount || 0).toLocaleString('es-CO')
 }
@@ -70,14 +65,11 @@ export default function Egresos({ showToast }) {
     }
   }
 
-  const totalOperativo = egresos.filter(e => e.tipo === 'operativo').reduce((s, e) => s + Number(e.monto), 0)
-  const totalProyecto  = egresos.filter(e => e.tipo === 'proyecto').reduce((s, e) => s + Number(e.monto), 0)
-  const totalGeneral  = totalOperativo + totalProyecto
+  const totalGeneral = egresos.reduce((s, e) => s + Number(e.monto), 0)
 
   const filtered = egresos.filter(e => {
     const matchSearch = !search ||
       (e.categoria?.nombre || '').toLowerCase().includes(search.toLowerCase()) ||
-      (e.subcategoria?.nombre || '').toLowerCase().includes(search.toLowerCase()) ||
       (e.descripcion || '').toLowerCase().includes(search.toLowerCase())
     return matchSearch
   })
@@ -102,33 +94,14 @@ export default function Egresos({ showToast }) {
           <div className="stat-icon" style={{ '--stat-bg': 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)' }}>
             <TrendingDown size={24} />
           </div>
-          <div className="stat-label">Total General</div>
+          <div className="stat-label">Total Egresos</div>
           <div className="stat-value">{loading ? '...' : formatMoney(totalGeneral)}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ '--stat-bg': 'rgba(29, 90, 148, 0.1)', color: 'var(--primary)' }}>
-            <TrendingDown size={24} />
-          </div>
-          <div className="stat-label">Operativos</div>
-          <div className="stat-value">{loading ? '...' : formatMoney(totalOperativo)}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ '--stat-bg': 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
-            <TrendingDown size={24} />
-          </div>
-          <div className="stat-label">De Proyecto</div>
-          <div className="stat-value">{loading ? '...' : formatMoney(totalProyecto)}</div>
         </div>
       </div>
 
       {/* Filtros */}
       <div className="card" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <select value={filtros.tipo} onChange={e => setFiltros({ ...filtros, tipo: e.target.value })}>
-            <option value="">Todos los tipos</option>
-            <option value="operativo">Operativo</option>
-            <option value="proyecto">De Proyecto</option>
-          </select>
           <select value={filtros.categoria_id} onChange={e => setFiltros({ ...filtros, categoria_id: e.target.value })}>
             <option value="">Todas las categorías</option>
             {categorias.map(c => (
@@ -137,7 +110,7 @@ export default function Egresos({ showToast }) {
           </select>
           <div className="search-bar" style={{ flex: 1, minWidth: 200 }}>
             <Search size={18} />
-            <input type="text" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input type="text" placeholder="Buscar por descripción..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
       </div>
@@ -159,9 +132,7 @@ export default function Egresos({ showToast }) {
                 <tr>
                   <th>Fecha</th>
                   <th>Categoría</th>
-                  <th>Subcategoría</th>
-                  <th>Tipo</th>
-                  <th>Proyecto</th>
+                  <th>Descripción</th>
                   <th>Monto</th>
                   <th>Acciones</th>
                 </tr>
@@ -171,13 +142,9 @@ export default function Egresos({ showToast }) {
                   <tr key={e.id}>
                     <td>{new Date(e.fecha).toLocaleDateString('es-CO')}</td>
                     <td>{e.categoria?.nombre || '—'}</td>
-                    <td>{e.subcategoria?.nombre || '—'}</td>
-                    <td>
-                      <span className="badge" style={{ background: ESTADO_COLORS[e.tipo]?.bg, color: ESTADO_COLORS[e.tipo]?.color }}>
-                        {e.tipo}
-                      </span>
+                    <td style={{ maxWidth: 200 }}>
+                      <span title={e.descripcion || ''}>{e.descripcion || '—'}</span>
                     </td>
-                    <td>{e.proyecto?.nombre || '—'}</td>
                     <td style={{ fontWeight: 600 }}>{formatMoney(e.monto)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 8 }}>
