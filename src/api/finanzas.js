@@ -16,7 +16,8 @@ async function fetchConToken(path, opts = {}) {
     const e = await res.json().catch(() => ({ error: 'Error desconocido' }));
     throw new Error(e.error);
   }
-  return res.json();
+  const json = await res.json();
+  return json.data;
 }
 
 export const ingresosApi = {
