@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
-import { Plus, Search, Pencil, Trash2, X, Users, Phone, Mail, Calendar, ChevronRight, ChevronLeft, Heart, Briefcase, FileText, Home, Church, User, Check, Eye, Clock, MapPin, Briefcase as BriefcaseIcon, Users as UsersIcon } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, X, Users, Phone, Mail, Calendar, ChevronRight, ChevronLeft, Heart, Briefcase, FileText, Home, Church, User, Check, Eye, Clock, MapPin, Star, TrendingUp } from 'lucide-react'
+import { participacionesApi, getLabelRol, getClasificacion } from '../api/participaciones'
 
 const steps = [
   { id: 1, label: 'Datos Personales', icon: User },
@@ -298,7 +299,27 @@ function MemberCard({ member, onView, onEdit, onDelete }) {
 }
 
 function MemberDrawer({ member, onClose, onEdit, onDelete }) {
+  const [stats, setStats] = useState(null)
+  const [loadingStats, setLoadingStats] = useState(false)
   const initials = `${member.nombre?.[0] || ''}${member.apellido?.[0] || ''}`.toUpperCase()
+
+  useEffect(() => {
+    loadStats()
+  }, [member.id])
+
+  async function loadStats() {
+    setLoadingStats(true)
+    try {
+      const data = await participacionesApi.getEstadisticasMiembro(member.id)
+      setStats(data)
+    } catch (err) {
+      console.error('Error loading stats:', err)
+    } finally {
+      setLoadingStats(false)
+    }
+  }
+
+  const clasificacion = stats?.clasificacion || { label: 'Sin datos', color: '#94A3B8' }
 
   return (
     <div className="drawer-overlay" onClick={onClose}>
@@ -372,6 +393,51 @@ function MemberDrawer({ member, onClose, onEdit, onDelete }) {
             {member.tipo_miembro && <div className="drawer-field"><span className="drawer-label">Tipo</span><span className="drawer-value">{member.tipo_miembro.replace('_', ' ')}</span></div>}
             {member.estado && <div className="drawer-field"><span className="drawer-label">Estado</span><span className="drawer-value">{member.estado}</span></div>}
             {member.iglesia_anterior && <div className="drawer-field"><span className="drawer-label">Iglesia anterior</span><span className="drawer-value">{member.iglesia_anterior}</span></div>}
+          </div>
+
+          {/* Participación */}
+          <div className="drawer-section">
+            <h4 className="drawer-section-title">Participación Ministerial</h4>
+            {loadingStats ? (
+              <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Cargando...</div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div style={{ background: 'var(--bg)', padding: 16, borderRadius: 'var(--radius)', textAlign: 'center' }}>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: clasificacion.color }}>{stats?.score || 0}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Puntos</div>
+                  </div>
+                  <div style={{ background: 'var(--bg)', padding: 16, borderRadius: 'var(--radius)', textAlign: 'center' }}>
+                    <div style={{
+                      display: 'inline-block',
+                      padding: '4px 12px',
+                      borderRadius: 12,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: clasificacion.color + '20',
+                      color: clasificacion.color
+                    }}>
+                      {clasificacion.label}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: 4 }}>Nivel</div>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div className="drawer-field" style={{ padding: '6px 0' }}>
+                    <span className="drawer-label">Participaciones</span>
+                    <span className="drawer-value">{stats?.total || 0}</span>
+                  </div>
+                  <div className="drawer-field" style={{ padding: '6px 0' }}>
+                    <span className="drawer-label">Último rol</span>
+                    <span className="drawer-value">{stats?.ultimoRol ? getLabelRol(stats.ultimoRol) : '-'}</span>
+                  </div>
+                  <div className="drawer-field" style={{ padding: '6px 0', gridColumn: 'span 2' }}>
+                    <span className="drawer-label">Rol más frecuente</span>
+                    <span className="drawer-value">{stats?.rolFrecuente ? getLabelRol(stats.rolFrecuente) : '-'}</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Laboral */}
