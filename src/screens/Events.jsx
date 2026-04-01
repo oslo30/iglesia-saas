@@ -33,7 +33,9 @@ export default function Events({ showToast }) {
 
   async function handleSave(formData) {
     try {
-      const fecha_hora = `${formData.fecha} ${formData.hora}:00`
+      // Usar el mismo formato que iglesia-app: new Date(fecha).toISOString()
+      // para que ambos frontends guarden en UTC consistente
+      const fecha_hora = new Date(`${formData.fecha}T${formData.hora}:00`).toISOString();
       const { error } = await supabase.from('servicios').insert([{
         nombre: formData.nombre,
         tipo: formData.tipo,
